@@ -1,0 +1,11 @@
+# El sitio es estático: no hay código de servidor, solo los archivos de public/.
+# Cloudflare publica desde aquí en cada push a main, así que no hay que subir
+# nada a mano. El nombre debe coincidir con el Worker que ya existe para que
+# el link del equipo (renaware-registro.nelson1614.workers.dev) no cambie.
+name = "renaware-registro"
+compatibility_date = "2026-10-20"
+
+[assets]
+directory = "./public"
+# El 404 propio en vez de la página de Cloudflare
+not_found_handling = "404-page"
