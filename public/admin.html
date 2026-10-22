@@ -770,7 +770,14 @@ function aPanel(x){
     conyuge: con && con.nombre ? {nombre:con.nombre, dni:con.dni||'', cel:con.celular||''} : null,
     documentos: (x.documentos||[]).map(d=>({n:d.nombre, t:d.tipo||'Documento', ruta:d.ruta})),
     items: (x.registro_items||[]).slice().sort((a,b)=>a.orden-b.orden)
-             .map(i=>((i.codigo||'')+' - '+(i.nombre||'')).replace(/^ - /,'')),
+             /* "código - nombre" para el contrato. El startsWith cubre los
+                registros que alcanzaron a guardarse con el código metido
+                dentro del nombre, que salían como "385000 - 385000 Especial". */
+             .map(i=>{
+               const c = String(i.codigo||'').trim(), n = String(i.nombre||'').trim();
+               if(!c) return n;
+               return c + ' - ' + (n.startsWith(c) ? n.slice(c.length).trim() : n);
+             }),
     itemsRaw: (x.registro_items||[]).slice().sort((a,b)=>a.orden-b.orden),
     analistaId: x.analista_id || null,
     bitacora: (x.bitacora||[]).map(b=>({f:Date.parse(b.momento), t:b.texto})).sort((a,b)=>a.f-b.f),

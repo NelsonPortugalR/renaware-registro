@@ -1643,9 +1643,12 @@ function plazosPosibles(inicial){
 }
 /* Mantiene producto y adicionales en texto, para el resumen y el envío */
 function sincronizaItems(){
+  /* Estos dos son campos de presentación (van al panel y al resumen), así que
+     llevan el código delante. El dato estructurado —datos.items— se queda con
+     el nombre limpio y su código aparte. */
   const items = datos.items || [];
-  datos.producto = items.length ? items[0].nombre : '';
-  datos.adicionales = items.slice(1).map(i=>i.nombre);
+  datos.producto = items.length ? nombreItem(items[0]) : '';
+  datos.adicionales = items.slice(1).map(nombreItem);
 }
 
 /* ---------- Elegir lista ---------- */
@@ -1697,11 +1700,11 @@ function dockBuscador(lista, onListo){
         '<span class="ip-m">'+
         '<span class="ip-p">'+fmtSoles(esAutocompra() ? precioAsesorDe(p) : p.p)+'</span></span>';
       b.addEventListener('click', ()=>{
-        const it = {lista:p.l, codigo:p.c, nombre:conCodigo(p.c, p.n), precio:p.p, precioAsesor:precioAsesorDe(p), puntos:p.pts||0, cantidad:1};
+        const it = {lista:p.l, codigo:p.c, nombre:p.n, precio:p.p, precioAsesor:precioAsesorDe(p), puntos:p.pts||0, cantidad:1};
         datos.items = datos.items || [];
         datos.items.push(it);
         sincronizaItems();
-        burbujaUser(it.nombre);
+        burbujaUser(conCodigo(it.codigo, it.nombre));
         dockLimpiar();
         ofreceUpsell(onListo);
       });
@@ -1723,7 +1726,7 @@ function quitaProducto(i){
   /* sincronizaItems reparte: el primero va en producto y el resto en
      adicionales. Rehacerlo a mano dejaba adicionales desactualizado. */
   sincronizaItems();
-  burbujaUser('🗑️ Quitar ' + tituloCorto(it.nombre));
+  burbujaUser('🗑️ Quitar ' + tituloCorto(nombreItem(it)));
   dockLimpiar();
   if(!datos.items.length){
     burbujaBot('Listo, el pedido quedó <b>sin productos</b>. Elige uno para continuar.')
@@ -1734,15 +1737,21 @@ function quitaProducto(i){
 }
 
 /* Nombre corto para el botón: los especiales son larguísimos */
-/* El nombre de cada producto arranca con su código: en las listas de especiales
-   hay nombres casi idénticos y el código es lo único que los distingue de un
-   vistazo, tanto en el resumen como en el contrato impreso. */
+/* El producto se MUESTRA con su código delante —en las listas de especiales
+   hay nombres casi idénticos y el código es lo único que los distingue— pero
+   se GUARDA con el nombre limpio: el código ya tiene su propio campo.
+   Guardarlo también dentro del nombre hizo que el contrato lo imprimiera dos
+   veces, «385000 - 385000 Especial #31». Componer al mostrar no puede repetir.
+   El startsWith cubre los pocos registros viejos que quedaron con el código
+   pegado al nombre. */
 function conCodigo(codigo, nombre){
   const c = String(codigo||'').trim(), n = String(nombre||'').trim();
   if(!c) return n;
-  if(n.startsWith(c)) return n;          /* ya venía con el código del catálogo */
+  if(n.startsWith(c)) return n;
   return c + ' ' + n;
 }
+/* El nombre que ve el asesor, con código; se usa en el resumen y la pestaña. */
+function nombreItem(it){ return conCodigo(it && it.codigo, it && it.nombre); }
 function tituloCorto(n){
   const s = String(n||'');
   const m = s.match(/^([^·]{3,34})·/);          /* "384700 Especial #22 · ..." */
@@ -1760,7 +1769,7 @@ function loopProductos(){
     ];
     /* Un botón de quitar por producto, para no tener que adivinar cuál sale */
     items.forEach((it,i)=>ops.push({
-      t:'🗑️ Quitar ' + escapa(tituloCorto(it.nombre)),
+      t:'🗑️ Quitar ' + escapa(tituloCorto(nombreItem(it))),
       clase:'secund',
       fn:()=>quitaProducto(i)
     }));
@@ -3049,7 +3058,7 @@ function vComprobante(){
   return c;
 }
 function vProducto(){
-  const it = (datos.items||[]).map(x=>x.nombre||x).filter(Boolean);
+  const it = (datos.items||[]).map(x=>typeof x === 'string' ? x : nombreItem(x)).filter(Boolean);
   if(it.length) return it.join(' + ');
   return vSi(datos.producto);
 }
