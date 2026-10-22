@@ -2046,13 +2046,19 @@ $('#asBuscar').addEventListener('input', ()=>{ clearTimeout(window._asT); window
 $('#asFiltro').addEventListener('change', asPinta);
 $('#asGuardar').addEventListener('click', asGuarda);
 $('#asAgregar').addEventListener('click', ()=>{
-  const nom = prompt('Nombre y apellidos del asesor:'); if(!nom) return;
-  const cod = prompt('Código de Rena Ware (5 a 7 dígitos). Puedes dejarlo vacío:','') || '';
-  if(cod && !/^[0-9]{5,7}$/.test(cod.trim())){ alert('El código debe tener entre 5 y 7 dígitos.'); return; }
-  const nuevo = {id:null, nombre:nom.trim(), codigo_asesor:cod.trim()||null, celular:'', correo:''};
-  EQ_LISTA.unshift(nuevo);
-  const tmp = 'nuevo-'+Date.now(); nuevo.id = tmp; AS_SUCIOS.add(tmp);
+  /* Antes esto eran dos prompts seguidos, incómodos en el celular y sin
+     manera de poner celular ni correo. Ahora se abre una fila vacía arriba de
+     la tabla y se llena como cualquier otra, con el cursor ya en el nombre. */
+  const fila = {id:'nuevo-'+Date.now()+Math.floor(Math.random()*1000),
+                esNuevo:true, nombre:'', codigo_asesor:'', celular:'', correo:''};
+  EQ_LISTA.unshift(fila);
+  AS_SUCIOS.add(fila.id);
+  /* Que la fila nueva se vea aunque haya un filtro o una búsqueda puesta */
+  const bus = $('#asBuscar'), fil = $('#asFiltro');
+  if(bus) bus.value = ''; if(fil) fil.value = '';
   asPinta();
+  const inp = document.querySelector('.as-f[data-id="'+fila.id+'"][data-c="nombre"]');
+  if(inp){ inp.scrollIntoView({block:'center'}); inp.focus(); }
 });
 $('#asCuerpo').addEventListener('input', e=>{
   if(!e.target.classList.contains('as-f')) return;
@@ -3318,10 +3324,15 @@ function asPinta(){
      const pat = a.patrocinador_id && porId[a.patrocinador_id] ? porId[a.patrocinador_id].nombre : '';
      const n = AS_VENTAS[rwNorm(a.nombre)] || 0;
      const d = directos[a.id] || 0;
-     return '<tr data-id="'+a.id+'" style="border-top:1px solid var(--borde,#333)">'+
-       '<td style="padding:5px 6px"><input class="as-f" data-c="nombre" data-id="'+a.id+'" value="'+escapa(a.nombre||'')+'" style="width:100%;min-width:190px;background:transparent;border:0;color:inherit"></td>'+
+     /* Una fila recién agregada se ve distinta hasta que se guarda, para que
+        no se confunda con las que ya están en la base. */
+     const nueva = !!a.esNuevo;
+     return '<tr data-id="'+a.id+'" style="border-top:1px solid var(--borde,#333)'+
+            (nueva?';background:rgba(46,160,67,.10)':'')+'">'+
+       '<td style="padding:5px 6px">'+(nueva?'<div class="peque" style="color:#2EA043;font-weight:700">nuevo · sin guardar</div>':'')+
+         '<input class="as-f" data-c="nombre" data-id="'+a.id+'" placeholder="Nombre y dos apellidos" value="'+escapa(a.nombre||'')+'" style="width:100%;min-width:190px;background:transparent;border:0;color:inherit"></td>'+
        /* El código provisional se ve de un vistazo: es el que hay que reemplazar. */
-       '<td><input class="as-f mono" data-c="codigo_asesor" data-id="'+a.id+'" value="'+escapa(a.codigo_asesor||'')+'"'+
+       '<td><input class="as-f mono" data-c="codigo_asesor" data-id="'+a.id+'" placeholder="código o DNI" value="'+escapa(a.codigo_asesor||'')+'"'+
          (esCodigoReal(a.codigo_asesor) ? '' :
            ' title="'+(esDniProvisional(a.codigo_asesor)
              ? 'Es un DNI, no un código. Reemplázalo cuando Rena Ware le asigne el suyo.'
@@ -3341,25 +3352,72 @@ function asPinta(){
    (lista.length>300 ? '<div class="ayuda" style="padding:8px">Mostrando los primeros 300. Afina la búsqueda para ver el resto.</div>' : '');
 }
 
+/* Qué se puede poner en el campo del código: el de Rena Ware (5 a 7 dígitos)
+   o, mientras no lo tenga, el DNI (8) como provisional. */
+function revisaFilaAsesor(a){
+  const nom = String(a.nombre||'').trim();
+  if(!nom) return 'falta el nombre';
+  if(nom.length < 5) return 'el nombre parece incompleto';
+  const cod = String(a.codigo_asesor||'').trim();
+  if(cod && !/^[0-9]{5,8}$/.test(cod))
+    return 'el código debe ser de 5 a 7 dígitos, o el DNI de 8 si aún no lo tiene';
+  const cel = String(a.celular||'').trim();
+  if(cel && !/^[0-9]{6,12}$/.test(cel.replace(/[\s+]/g,''))) return 'el celular no parece válido';
+  const cor = String(a.correo||'').trim();
+  if(cor && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cor)) return 'el correo no parece válido';
+  return null;
+}
 async function asGuarda(){
   if(!AS_SUCIOS.size){ $('#modalAsesores').classList.remove('on'); return; }
   const btn = $('#asGuardar'); btn.disabled = true; btn.textContent = 'Guardando…';
-  let ok = 0, fallos = [];
+  let ok = 0; const fallos = [], quedanSucios = new Set();
   try{
     for(const id of AS_SUCIOS){
       const a = EQ_LISTA.find(x=>x.id===id); if(!a) continue;
-      const cuerpo = {nombre:a.nombre, codigo_asesor:a.codigo_asesor||null,
-                      celular:a.celular||null, correo:a.correo||null};
-      const url = a.id ? SB_URL+'/rest/v1/eq_personas?id=eq.'+a.id : SB_URL+'/rest/v1/eq_personas';
-      const r = await fetch(url, {method: a.id?'PATCH':'POST',
+
+      const problema = revisaFilaAsesor(a);
+      if(problema){ fallos.push((a.nombre||'(sin nombre)')+' — '+problema); quedanSucios.add(id); continue; }
+
+      const cuerpo = {nombre:String(a.nombre).trim(),
+                      codigo_asesor:String(a.codigo_asesor||'').trim()||null,
+                      celular:String(a.celular||'').trim()||null,
+                      correo:String(a.correo||'').trim()||null};
+      /* El id temporal de una fila recién agregada NO es un UUID: decidir por
+         él mandaba un PATCH a "?id=eq.nuevo-1761…" y Postgres devolvía 400.
+         Lo que distingue a una fila nueva es la marca, no el id. */
+      const esNuevo = !!a.esNuevo;
+      if(esNuevo) cuerpo.origen = 'manual';
+      const url = esNuevo ? SB_URL+'/rest/v1/eq_personas'
+                          : SB_URL+'/rest/v1/eq_personas?id=eq.'+encodeURIComponent(a.id);
+      const r = await fetch(url, {method: esNuevo?'POST':'PATCH',
         headers:Object.assign({}, cab(), {'Content-Type':'application/json','Prefer':'return=minimal'}),
         body: JSON.stringify(cuerpo)});
-      if(r.ok) ok++;
-      else fallos.push((a.nombre||'')+' — '+(r.status===409?'ese código ya lo tiene otra persona':'HTTP '+r.status));
+
+      if(r.ok){ ok++; continue; }
+      quedanSucios.add(id);
+      /* El motivo de verdad, no un número: "HTTP 400" no dice nada a nadie. */
+      let motivo = 'HTTP '+r.status;
+      try{
+        const e = await r.json();
+        if(r.status===409 || /duplicate key/i.test(e.message||''))
+          motivo = 'ese código ya lo tiene otra persona';
+        else if(e.message) motivo = e.message;
+        if(e.details && !/duplicate/i.test(e.details)) motivo += ' ('+e.details+')';
+      }catch(_){}
+      fallos.push((a.nombre||'(sin nombre)')+' — '+motivo);
     }
-    AS_SUCIOS.clear();
-    if(fallos.length) alert('Se guardaron '+ok+'.\n\nNo se pudieron guardar:\n· '+fallos.join('\n· '));
-    await abrirAsesores();
+
+    if(fallos.length){
+      /* Lo que falló se queda en pantalla y editable, para corregirlo sin
+         volver a escribirlo todo. */
+      AS_SUCIOS.clear(); quedanSucios.forEach(x=>AS_SUCIOS.add(x));
+      alert((ok ? 'Se guardaron '+ok+'.\n\n' : '')+'Esto quedó pendiente:\n· '+fallos.join('\n· ')+
+            '\n\nLas filas siguen aquí para que las corrijas.');
+      asPinta();
+    } else {
+      AS_SUCIOS.clear();
+      await abrirAsesores();
+    }
   }catch(err){ alert('No se pudo guardar: '+String(err.message||err)); }
   finally{ btn.disabled = false; btn.textContent = 'Guardar cambios'; }
 }
