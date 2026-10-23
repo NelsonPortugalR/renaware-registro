@@ -440,7 +440,7 @@
 <div class="velo" id="velo"></div>
 
 <div class="modal" id="modalAsesores">
-  <div class="modal-caja" style="max-width:1000px">
+  <div class="modal-caja" style="max-width:1180px">
     <div class="modal-top">
       <h2>Asesores del equipo</h2>
       <button class="cerrar" id="asCerrar">✕</button>
@@ -449,7 +449,9 @@
     nombre, código, distrito o correo: las palabras pueden ir en cualquier orden.<br>
     Un <b>código de Rena Ware tiene de 5 a 7 dígitos</b>. Si el asesor todavía no lo tiene se guarda
     su <b>DNI (8 dígitos)</b> para poder emitir el PDF; esos salen marcados en ámbar y el filtro
-    «falta el código real» los junta para ir reemplazándolos.</p>
+    «falta el código real» los junta para ir reemplazándolos. Al poner el código real, el DNI se
+    conserva solo en su columna. <b>DNI</b> y <b>fecha de nacimiento</b> se llenan aquí a mano cuando
+    faltan.</p>
     <div class="campos" style="margin-bottom:10px">
       <label class="campo" style="flex:2"><span>Buscar</span>
         <input id="asBuscar" placeholder="Ej.: elena tacna, o 1723832"></label>
@@ -459,6 +461,8 @@
           <option value="porcodigo">⚠️ Falta el código real (vacío o DNI)</option>
           <option value="condni">Tienen DNI en vez de código</option>
           <option value="sincod">Sin nada en el campo código</option>
+          <option value="sindni">Sin DNI</option>
+          <option value="sinnac">Sin fecha de nacimiento</option>
           <option value="sincel">Sin celular</option>
           <option value="sinpat">Sin patrocinador</option>
           <option value="conventas">Con ventas registradas</option>
@@ -2050,7 +2054,7 @@ $('#asAgregar').addEventListener('click', ()=>{
      manera de poner celular ni correo. Ahora se abre una fila vacía arriba de
      la tabla y se llena como cualquier otra, con el cursor ya en el nombre. */
   const fila = {id:'nuevo-'+Date.now()+Math.floor(Math.random()*1000),
-                esNuevo:true, nombre:'', codigo_asesor:'', celular:'', correo:''};
+                esNuevo:true, nombre:'', codigo_asesor:'', dni:'', nacimiento:'', celular:'', correo:''};
   EQ_LISTA.unshift(fila);
   AS_SUCIOS.add(fila.id);
   /* Que la fila nueva se vea aunque haya un filtro o una búsqueda puesta */
@@ -3262,7 +3266,7 @@ let EQ_LISTA = [], AS_SUCIOS = new Set(), AS_VENTAS = {};
 
 function asCoincide(a, q){
   if(!q) return true;
-  const heno = rwNorm([a.nombre, a.codigo_asesor, a.correo, a.celular,
+  const heno = rwNorm([a.nombre, a.codigo_asesor, a.dni, a.correo, a.celular,
                        a.distrito, a.provincia, a.departamento].join(' '));
   return rwNorm(q).split(/\s+/).filter(Boolean).every(w => heno.includes(w));
 }
@@ -3271,7 +3275,7 @@ async function abrirAsesores(){
   $('#modalAsesores').classList.add('on');
   $('#asCuerpo').innerHTML = '<div style="padding:20px;color:var(--suave)">Cargando…</div>';
   try{
-    EQ_LISTA = await sbGet('eq_personas?select=id,nombre,codigo_asesor,celular,correo,distrito,provincia,departamento,ingreso_fecha,patrocinador_id,activo&order=nombre&limit=2000');
+    EQ_LISTA = await sbGet('eq_personas?select=id,nombre,codigo_asesor,dni,nacimiento,celular,correo,distrito,provincia,departamento,ingreso_fecha,patrocinador_id,activo&order=nombre&limit=2000');
     AS_SUCIOS.clear();
     /* ventas asociadas, para saber a quién no conviene tocar */
     AS_VENTAS = {};
@@ -3303,12 +3307,16 @@ function asPinta(){
   if(f==='porcodigo') lista = lista.filter(a=>!esCodigoReal(a.codigo_asesor));
   if(f==='condni')    lista = lista.filter(a=>esDniProvisional(a.codigo_asesor));
   if(f==='sincod')    lista = lista.filter(a=>!a.codigo_asesor);
+  if(f==='sindni')    lista = lista.filter(a=>!a.dni);
+  if(f==='sinnac')    lista = lista.filter(a=>!a.nacimiento);
   if(f==='sincel')    lista = lista.filter(a=>!a.celular);
   if(f==='sinpat')    lista = lista.filter(a=>!a.patrocinador_id);
   if(f==='conventas') lista = lista.filter(a=>AS_VENTAS[rwNorm(a.nombre)]);
 
   const porArreglar = EQ_LISTA.filter(a=>!esCodigoReal(a.codigo_asesor)).length;
   $('#asResumen').innerHTML = '<b>'+lista.length+'</b> de '+EQ_LISTA.length+' asesores'+
+    (EQ_LISTA.filter(a=>!a.dni).length ? ' · '+EQ_LISTA.filter(a=>!a.dni).length+' sin DNI' : '')+
+    (EQ_LISTA.filter(a=>!a.nacimiento).length ? ' · '+EQ_LISTA.filter(a=>!a.nacimiento).length+' sin fecha de nac.' : '')+
     (porArreglar ? ' · <b style="color:var(--acento,#c98a2e)">'+porArreglar+
        (porArreglar===1?' sin código real':' sin código real')+'</b>' : ' · todos con código real ✓')+
     (AS_SUCIOS.size ? ' · <b style="color:var(--rojo)">'+AS_SUCIOS.size+' con cambios sin guardar</b>' : '');
@@ -3318,7 +3326,7 @@ function asPinta(){
   $('#asCuerpo').innerHTML =
    '<div class="tabla-scroll"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
    '<thead><tr style="text-align:left;position:sticky;top:0;background:var(--fondo,#111)">'+
-   '<th style="padding:6px">Nombre</th><th>Código o DNI</th><th>Celular</th><th>Correo</th>'+
+   '<th style="padding:6px">Nombre</th><th>Código</th><th>DNI</th><th>Nacimiento</th><th>Celular</th><th>Correo</th>'+
    '<th>Zona</th><th>Ingreso</th><th>Patrocinador</th><th>Red</th></tr></thead><tbody>'+
    lista.slice(0,300).map(a=>{
      const pat = a.patrocinador_id && porId[a.patrocinador_id] ? porId[a.patrocinador_id].nombre : '';
@@ -3340,6 +3348,8 @@ function asPinta(){
            ' style="width:80px;background:rgba(201,138,46,.14);border:0;border-bottom:1.5px solid var(--acento,#c98a2e);color:inherit"')+
          (esCodigoReal(a.codigo_asesor) ? ' style="width:80px;background:transparent;border:0;color:inherit"' : '')+
        '></td>'+
+       '<td><input class="as-f mono" data-c="dni" data-id="'+a.id+'" inputmode="numeric" maxlength="8" placeholder="DNI" value="'+escapa(a.dni||'')+'" style="width:80px;background:transparent;border:0;color:inherit"></td>'+
+       '<td><input class="as-f mono" data-c="nacimiento" data-id="'+a.id+'" type="date" value="'+escapa(a.nacimiento||'')+'" style="width:125px;background:transparent;border:0;color:inherit;font-size:11px"></td>'+
        '<td><input class="as-f mono" data-c="celular" data-id="'+a.id+'" value="'+escapa(a.celular||'')+'" style="width:90px;background:transparent;border:0;color:inherit"></td>'+
        '<td><input class="as-f" data-c="correo" data-id="'+a.id+'" value="'+escapa(a.correo||'')+'" style="width:100%;min-width:170px;background:transparent;border:0;color:inherit"></td>'+
        '<td class="peque">'+escapa([a.distrito,a.departamento].filter(Boolean).join(' · '))+'</td>'+
@@ -3361,6 +3371,13 @@ function revisaFilaAsesor(a){
   const cod = String(a.codigo_asesor||'').trim();
   if(cod && !/^[0-9]{5,8}$/.test(cod))
     return 'el código debe ser de 5 a 7 dígitos, o el DNI de 8 si aún no lo tiene';
+  const dni = String(a.dni||'').trim();
+  if(dni && !/^[0-9]{8}$/.test(dni)) return 'el DNI debe tener 8 dígitos';
+  const nac = String(a.nacimiento||'').trim();
+  if(nac){
+    const d = new Date(nac+'T12:00:00'); const edad = (Date.now()-d.getTime())/31557600000;
+    if(isNaN(d.getTime()) || edad < 16 || edad > 100) return 'la fecha de nacimiento no parece correcta';
+  }
   const cel = String(a.celular||'').trim();
   if(cel && !/^[0-9]{6,12}$/.test(cel.replace(/[\s+]/g,''))) return 'el celular no parece válido';
   const cor = String(a.correo||'').trim();
@@ -3380,6 +3397,8 @@ async function asGuarda(){
 
       const cuerpo = {nombre:String(a.nombre).trim(),
                       codigo_asesor:String(a.codigo_asesor||'').trim()||null,
+                      dni:String(a.dni||'').trim()||null,
+                      nacimiento:String(a.nacimiento||'').trim()||null,
                       celular:String(a.celular||'').trim()||null,
                       correo:String(a.correo||'').trim()||null};
       /* El id temporal de una fila recién agregada NO es un UUID: decidir por
@@ -3400,7 +3419,7 @@ async function asGuarda(){
       try{
         const e = await r.json();
         if(r.status===409 || /duplicate key/i.test(e.message||''))
-          motivo = 'ese código ya lo tiene otra persona';
+          motivo = /dni/i.test(e.message||'') ? 'ese DNI ya lo tiene otra persona' : 'ese código ya lo tiene otra persona';
         else if(e.message) motivo = e.message;
         if(e.details && !/duplicate/i.test(e.details)) motivo += ' ('+e.details+')';
       }catch(_){}
