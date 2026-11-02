@@ -462,6 +462,7 @@
           <option value="condni">Tienen DNI en vez de código</option>
           <option value="sincod">Sin nada en el campo código</option>
           <option value="sindni">Sin DNI</option>
+          <option value="sinruc">Sin RUC</option>
           <option value="sinnac">Sin fecha de nacimiento</option>
           <option value="sincel">Sin celular</option>
           <option value="sinpat">Sin patrocinador</option>
@@ -2054,7 +2055,7 @@ $('#asAgregar').addEventListener('click', ()=>{
      manera de poner celular ni correo. Ahora se abre una fila vacía arriba de
      la tabla y se llena como cualquier otra, con el cursor ya en el nombre. */
   const fila = {id:'nuevo-'+Date.now()+Math.floor(Math.random()*1000),
-                esNuevo:true, nombre:'', codigo_asesor:'', dni:'', nacimiento:'', celular:'', correo:''};
+                esNuevo:true, nombre:'', codigo_asesor:'', dni:'', nacimiento:'', ruc:'', celular:'', correo:''};
   EQ_LISTA.unshift(fila);
   AS_SUCIOS.add(fila.id);
   /* Que la fila nueva se vea aunque haya un filtro o una búsqueda puesta */
@@ -3266,7 +3267,7 @@ let EQ_LISTA = [], AS_SUCIOS = new Set(), AS_VENTAS = {};
 
 function asCoincide(a, q){
   if(!q) return true;
-  const heno = rwNorm([a.nombre, a.codigo_asesor, a.dni, a.correo, a.celular,
+  const heno = rwNorm([a.nombre, a.codigo_asesor, a.dni, a.ruc, a.correo, a.celular,
                        a.distrito, a.provincia, a.departamento].join(' '));
   return rwNorm(q).split(/\s+/).filter(Boolean).every(w => heno.includes(w));
 }
@@ -3275,7 +3276,7 @@ async function abrirAsesores(){
   $('#modalAsesores').classList.add('on');
   $('#asCuerpo').innerHTML = '<div style="padding:20px;color:var(--suave)">Cargando…</div>';
   try{
-    EQ_LISTA = await sbGet('eq_personas?select=id,nombre,codigo_asesor,dni,nacimiento,celular,correo,distrito,provincia,departamento,ingreso_fecha,patrocinador_id,activo&order=nombre&limit=2000');
+    EQ_LISTA = await sbGet('eq_personas?select=id,nombre,codigo_asesor,dni,nacimiento,ruc,celular,correo,distrito,provincia,departamento,ingreso_fecha,patrocinador_id,activo&order=nombre&limit=2000');
     AS_SUCIOS.clear();
     /* ventas asociadas, para saber a quién no conviene tocar */
     AS_VENTAS = {};
@@ -3308,6 +3309,7 @@ function asPinta(){
   if(f==='condni')    lista = lista.filter(a=>esDniProvisional(a.codigo_asesor));
   if(f==='sincod')    lista = lista.filter(a=>!a.codigo_asesor);
   if(f==='sindni')    lista = lista.filter(a=>!a.dni);
+  if(f==='sinruc')    lista = lista.filter(a=>!a.ruc);
   if(f==='sinnac')    lista = lista.filter(a=>!a.nacimiento);
   if(f==='sincel')    lista = lista.filter(a=>!a.celular);
   if(f==='sinpat')    lista = lista.filter(a=>!a.patrocinador_id);
@@ -3316,6 +3318,7 @@ function asPinta(){
   const porArreglar = EQ_LISTA.filter(a=>!esCodigoReal(a.codigo_asesor)).length;
   $('#asResumen').innerHTML = '<b>'+lista.length+'</b> de '+EQ_LISTA.length+' asesores'+
     (EQ_LISTA.filter(a=>!a.dni).length ? ' · '+EQ_LISTA.filter(a=>!a.dni).length+' sin DNI' : '')+
+    (EQ_LISTA.filter(a=>!a.ruc).length ? ' · '+EQ_LISTA.filter(a=>!a.ruc).length+' sin RUC' : '')+
     (EQ_LISTA.filter(a=>!a.nacimiento).length ? ' · '+EQ_LISTA.filter(a=>!a.nacimiento).length+' sin fecha de nac.' : '')+
     (porArreglar ? ' · <b style="color:var(--acento,#c98a2e)">'+porArreglar+
        (porArreglar===1?' sin código real':' sin código real')+'</b>' : ' · todos con código real ✓')+
@@ -3326,7 +3329,7 @@ function asPinta(){
   $('#asCuerpo').innerHTML =
    '<div class="tabla-scroll"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
    '<thead><tr style="text-align:left;position:sticky;top:0;background:var(--fondo,#111)">'+
-   '<th style="padding:6px">Nombre</th><th>Código</th><th>DNI</th><th>Nacimiento</th><th>Celular</th><th>Correo</th>'+
+   '<th style="padding:6px">Nombre</th><th>Código</th><th>DNI</th><th>RUC</th><th>Nacimiento</th><th>Celular</th><th>Correo</th>'+
    '<th>Zona</th><th>Ingreso</th><th>Patrocinador</th><th>Red</th></tr></thead><tbody>'+
    lista.slice(0,300).map(a=>{
      const pat = a.patrocinador_id && porId[a.patrocinador_id] ? porId[a.patrocinador_id].nombre : '';
@@ -3349,6 +3352,11 @@ function asPinta(){
          (esCodigoReal(a.codigo_asesor) ? ' style="width:80px;background:transparent;border:0;color:inherit"' : '')+
        '></td>'+
        '<td><input class="as-f mono" data-c="dni" data-id="'+a.id+'" inputmode="numeric" maxlength="8" placeholder="DNI" value="'+escapa(a.dni||'')+'" style="width:80px;background:transparent;border:0;color:inherit"></td>'+
+       /* El RUC del asesor, para facturar sus comisiones. El de 11 dígitos que
+          empieza en 10 es el de persona natural y sale de su DNI; el que
+          empieza en 20 es de empresa. */
+       '<td><input class="as-f mono" data-c="ruc" data-id="'+a.id+'" inputmode="numeric" maxlength="11" placeholder="RUC" value="'+escapa(a.ruc||'')+'" style="width:95px;background:transparent;border:0;color:inherit"'+
+         (a.dni && !a.ruc ? ' title="Sugerido para persona natural: 10'+escapa(a.dni)+'0"' : '')+'></td>'+
        '<td><input class="as-f mono" data-c="nacimiento" data-id="'+a.id+'" type="date" value="'+escapa(a.nacimiento||'')+'" style="width:125px;background:transparent;border:0;color:inherit;font-size:11px"></td>'+
        '<td><input class="as-f mono" data-c="celular" data-id="'+a.id+'" value="'+escapa(a.celular||'')+'" style="width:90px;background:transparent;border:0;color:inherit"></td>'+
        '<td><input class="as-f" data-c="correo" data-id="'+a.id+'" value="'+escapa(a.correo||'')+'" style="width:100%;min-width:170px;background:transparent;border:0;color:inherit"></td>'+
@@ -3373,6 +3381,15 @@ function revisaFilaAsesor(a){
     return 'el código debe ser de 5 a 7 dígitos, o el DNI de 8 si aún no lo tiene';
   const dni = String(a.dni||'').trim();
   if(dni && !/^[0-9]{8}$/.test(dni)) return 'el DNI debe tener 8 dígitos';
+  const ruc = String(a.ruc||'').trim();
+  if(ruc){
+    if(!/^[0-9]{11}$/.test(ruc)) return 'el RUC debe tener 11 dígitos';
+    if(!/^(10|15|17|20)/.test(ruc)) return 'un RUC empieza en 10, 15, 17 o 20';
+    /* El RUC de persona natural lleva el DNI dentro: si no calza, uno de los
+       dos está mal tecleado y conviene verlo antes de facturar. */
+    if(ruc.startsWith('10') && dni && ruc.slice(2,10) !== dni)
+      return 'el RUC empieza en 10 pero no contiene su DNI ('+dni+')';
+  }
   const nac = String(a.nacimiento||'').trim();
   if(nac){
     const d = new Date(nac+'T12:00:00'); const edad = (Date.now()-d.getTime())/31557600000;
@@ -3399,6 +3416,7 @@ async function asGuarda(){
                       codigo_asesor:String(a.codigo_asesor||'').trim()||null,
                       dni:String(a.dni||'').trim()||null,
                       nacimiento:String(a.nacimiento||'').trim()||null,
+                      ruc:String(a.ruc||'').trim()||null,
                       celular:String(a.celular||'').trim()||null,
                       correo:String(a.correo||'').trim()||null};
       /* El id temporal de una fila recién agregada NO es un UUID: decidir por
