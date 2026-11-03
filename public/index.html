@@ -768,9 +768,7 @@ const PASOS = {
         const eq = await listaAsesores();
         (eq||[]).filter(a=>coincidePalabras(a.nombre, q)).slice(0,4).forEach(a=>out.push({
           t: a.nombre, sub: 'Asesor'+(a.codigo?' · código '+a.codigo:''),
-          fn: ()=>{ datos.ventaComprador = a.nombre;
-                    if(a.codigo && !String(a.codigo).startsWith('PEND-')) datos.asesorCodigo = a.codigo;
-                    burbujaUser(a.nombre); dockLimpiar(); avanzar(); }
+          fn: ()=>{ burbujaUser(a.nombre); dockLimpiar(); aplicaAsesor(a); }
         }));
       }
       /* Y siempre, los clientes de ventas anteriores */
@@ -817,7 +815,7 @@ const PASOS = {
       return validaDni(v);
     },
     guarda(v){ datos.ventaDni=v; },
-    alTerminar(){ buscaClienteConocido(); }
+    alTerminar(){ guardaDniEnFichaAsesor(); buscaClienteConocido(); }
   },
   facturaDatos:{ tipo:'facturaDatos' },
 
@@ -846,7 +844,12 @@ const PASOS = {
          porque hacen falta el nombre y el DNI del titular para preguntarlos bien. */
       if(datos.ventaTipo==='Autocompra'){
         if(editando){ editarComisionado(); }
-        else { cola.unshift('comisionado'); totalPasos++; avanzar(); }
+        /* Se pregunta después del nombre y el DNI, no antes. En la autocompra
+           quien factura es el propio asesor: recién ahí se sabe de quién se
+           está hablando —antes la pregunta salía sin nombre— y se le puede
+           ofrecer el RUC que ya figura en su ficha. Es la misma razón por la
+           que facturaDatos va al final en la venta a terceros. */
+        else { insertaEnLaCola('facturaDatos', ['comisionado']); avanzar(); }
       }else{
         if(editando){ editando=false; flujoFactura(); return; }
         avanzar();
@@ -3718,7 +3721,7 @@ async function aplicaCliente(c){
   datos.tipoDocumento  = 'DNI';
   datos.cliOpc         = await rpc('opciones_cliente', {doc: c.dni});
 
-  cola = cola.filter(k => !['ventaComprador','tipoDocumento','ventaDni'].includes(k));
+  quitaDeLaCola(['ventaComprador','tipoDocumento','ventaDni']);
 
   const o = datos.cliOpc || {};
   const n = a => Array.isArray(a) ? a.length : 0;
@@ -3732,7 +3735,115 @@ async function aplicaCliente(c){
     (cuenta.length
       ? '<span class="peque">De sus compras anteriores tengo '+escapa(cuenta.join(', '))+
         '. Te los iré mostrando a medida que avancemos, por si sirven.</span>'
-      : '')).then(()=>avanzar());
+      : '')).then(()=>sigueOVuelve());
+}
+
+/* Saca pasos de la cola y descuenta lo mismo del total, para que la barra de
+   avance no se quede corta cuando el formulario se ahorra preguntas. */
+function quitaDeLaCola(ids){
+  const antes = cola.length;
+  cola = cola.filter(k => ids.indexOf(k) === -1);
+  totalPasos -= (antes - cola.length);
+}
+
+/* Mete pasos justo antes de otro, sin alterar el resto del orden */
+function insertaEnLaCola(antesDe, ids){
+  const i = cola.indexOf(antesDe);
+  if(i === -1) cola.unshift.apply(cola, ids);
+  else cola.splice.apply(cola, [i, 0].concat(ids));
+  totalPasos += ids.length;
+}
+
+/* En medio del formulario se sigue a la pregunta siguiente; si esto vino de
+   una corrección, se vuelve al resumen, que es de donde salió. */
+function sigueOVuelve(){
+  if(editando){ editando = false; irResumen(); } else { avanzar(); }
+}
+
+/* ---------- Autocompra: el comprador es un asesor del equipo ----------
+   Su ficha ya tiene DNI, celular, correo y a veces el RUC con el que factura.
+   Volver a preguntarlo es pedirle que teclee —y que se equivoque— en datos que
+   están a un fetch de distancia. Se traen, se dice cuáles se usaron y esas
+   preguntas no se hacen. Lo que la ficha no tenga se pregunta como siempre. */
+async function aplicaAsesor(a){
+  datos.ventaComprador = a.nombre;
+  if(a.codigo && !String(a.codigo).startsWith('PEND-')) datos.asesorCodigo = a.codigo;
+
+  const f = await rpc('datos_asesor', {cod: a.codigo || '', nom: a.nombre}) || {};
+  datos.fichaAsesor = f;
+  const dni = /^[0-9]{8}$/.test(String(f.dni || '')) ? String(f.dni) : '';
+
+  if(dni){
+    datos.ventaDni = dni;
+    datos.tipoDoc  = 'DNI';
+    quitaDeLaCola(['tipoDocumento','ventaDni']);
+    datos.cliOpc = await rpc('opciones_cliente', {doc: dni});
+  }
+  /* El celular, el correo y el RUC de su ficha sirven igual aunque el DNI no
+     esté: sin DNI se pregunta el documento como siempre, y lo que se escriba
+     queda guardado en su ficha (ver alTerminar de ventaDni). */
+  sumaFichaAsesor(f);
+
+  if(!dni){
+    burbujaBot('Listo ✅ <b>'+escapa(a.nombre)+'</b>'+
+      (a.codigo ? ' · asesor '+escapa(a.codigo) : '')+'.').then(()=>sigueOVuelve());
+    return;
+  }
+
+  const o = datos.cliOpc || {};
+  const n = x => Array.isArray(x) ? x.length : 0;
+  const cuenta = [];
+  if(n(o.domicilio))   cuenta.push(n(o.domicilio)+' dirección'+(n(o.domicilio)>1?'es':''));
+  if(n(o.celular)>1)   cuenta.push(n(o.celular)+' celulares');
+  if(n(o.referencias)) cuenta.push(n(o.referencias)+' referencia'+(n(o.referencias)>1?'s':''));
+  if(n(o.fuentes))     cuenta.push(n(o.fuentes)+' trabajo'+(n(o.fuentes)>1?'s':''));
+
+  burbujaBot('Listo ✅ <b>'+escapa(a.nombre)+'</b>'+
+    (a.codigo ? ' · asesor '+escapa(a.codigo) : '')+
+    '<span class="peque">DNI '+escapa(dni)+', de su ficha de asesor'+
+    (cuenta.length ? '. Y de sus compras anteriores tengo '+escapa(cuenta.join(', ')) : '')+
+    '. Si algo no cuadra, lo corriges desde «📋 Ver».</span>').then(()=>sigueOVuelve());
+}
+
+/* Si la autocompra es de un asesor cuya ficha no tenía DNI, el que se acaba de
+   escribir queda guardado ahí. La base de asesores se completa con el uso, que
+   es la única forma en que se mantiene al día. No pisa un DNI ya cargado y el
+   nombre tiene que calzar, para que un código mal elegido no escriba sobre
+   otra persona. Va en silencio: es mantenimiento, no una pregunta más. */
+function guardaDniEnFichaAsesor(){
+  if(datos.ventaTipo !== 'Autocompra') return;
+  if(datos.tipoDoc !== 'DNI' || !/^[0-9]{8}$/.test(String(datos.ventaDni||''))) return;
+  const f = datos.fichaAsesor;
+  if(!f || !f.codigo || String(f.dni||'').trim()) return;
+  rpc('completa_dni_asesor', {cod:f.codigo, nom:datos.ventaComprador, doc:datos.ventaDni})
+    .then(ok=>{ if(ok) f.dni = datos.ventaDni; });
+}
+
+/* Mete lo que dice la ficha del asesor entre las opciones conocidas, para que
+   cada paso la ofrezca cuando llegue su turno. Va al final: primero lo que
+   realmente usó en compras anteriores, después lo que figura en su ficha. */
+function sumaFichaAsesor(f){
+  if(!datos.cliOpc) datos.cliOpc = {};
+  const o = datos.cliOpc;
+  const pon = (campo, item) => {
+    if(!Array.isArray(o[campo])) o[campo] = [];
+    o[campo].push(Object.assign({fuente:'de su ficha de asesor'}, item));
+  };
+  const soloDigitos = s => String(s||'').replace(/\D/g,'');
+  const yaEsta = (campo, valor, clave) =>
+    (o[campo]||[]).some(it => String(it[clave||'valor']||'').trim().toLowerCase()
+                              === String(valor||'').trim().toLowerCase());
+
+  if(/^9[0-9]{8}$/.test(soloDigitos(f.celular)) &&
+     !(o.celular||[]).some(it => soloDigitos(it.valor) === soloDigitos(f.celular)))
+    pon('celular', {valor: soloDigitos(f.celular)});
+
+  if(String(f.correo||'').indexOf('@') > 0 && !yaEsta('correo', f.correo))
+    pon('correo', {valor: String(f.correo).trim()});
+
+  if(/^(10|15|17|20)[0-9]{9}$/.test(soloDigitos(f.ruc)) && !yaEsta('factura', f.ruc, 'ruc'))
+    pon('factura', {ruc: soloDigitos(f.ruc), ruc_tipo: soloDigitos(f.ruc).slice(0,2),
+                    razon_social: ''});
 }
 
 /* ---------- Opciones conocidas, campo por campo ----------
@@ -3745,11 +3856,16 @@ function opcionesDe(campo){
 }
 
 function ofreceConocidas(cfg){
-  const lista = opcionesDe(cfg.campo);
+  const lista = cfg.lista || opcionesDe(cfg.campo);
   if(!lista.length) return false;
+  /* Lo que viene de la ficha del asesor no tiene historia de uso: dice de
+     dónde salió en vez de inventar una fecha. */
+  const pie = it => it.fuente
+    ? escapa(it.fuente)
+    : 'usada ' + (it.veces>1 ? it.veces+' veces · ' : '') + 'última el ' + it.ultima;
   const ops = lista.slice(0,6).map((it,idx)=>({
-    t: (idx===0?'🕒 ':'') + cfg.etiqueta(it) +
-       '<span class="peque">usada ' + (it.veces>1 ? it.veces+' veces · ' : '') + 'última el ' + it.ultima + '</span>',
+    t: (idx===0 && !it.fuente ? '🕒 ' : '') + cfg.etiqueta(it) +
+       '<span class="peque">' + pie(it) + '</span>',
     fn: ()=>{ burbujaUser(cfg.resumen ? cfg.resumen(it) : String(cfg.etiqueta(it)).replace(/<[^>]+>/g,' '));
               dockLimpiar(); cfg.aplicar(it); }
   }));
@@ -3792,6 +3908,23 @@ function intentaConocidas(id){
       cola = cola.filter(k=>k!=='ubicacion' && k!=='direccion');
       seguir();
     }});
+
+  /* El paso «ruc» es el de la autocompra; «facturaDatos», el de la venta a
+     terceros. Los dos piden lo mismo, así que los dos ofrecen lo conocido. */
+  if(id==='ruc'){
+    /* En crédito el tipo de RUC viene impuesto: no se ofrece uno que no calce */
+    const lista = opcionesDe('factura').filter(it =>
+      !datos.rucTipo || String(it.ruc||'').slice(0,2) === datos.rucTipo);
+    if(!lista.length) return false;
+    return ofreceConocidas({
+      campo:'factura', lista:lista, otra:escribir, otraTxt:'✍️ Otro RUC',
+      pregunta:n=>'¿Facturamos al <b>RUC</b> que ya tenemos'+(n>1?', o a otro de estos?':'?'),
+      etiqueta:it=>'🧾 '+escapa(it.ruc)+(it.razon_social?'<br><span class="peque">'+escapa(it.razon_social)+'</span>':''),
+      resumen:it=>'🧾 '+it.ruc,
+      aplicar:it=>{ datos.ruc=it.ruc; datos.rucTipo=it.ruc_tipo||String(it.ruc).slice(0,2);
+                    if(it.razon_social) datos.razonSocial=it.razon_social;
+                    seguir(); }});
+  }
 
   if(id==='facturaDatos' && datos.comprobante==='Factura') return ofreceConocidas({
     campo:'factura', otra:escribir, otraTxt:'✍️ Otro RUC',

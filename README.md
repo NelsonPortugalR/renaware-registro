@@ -49,6 +49,27 @@ formulario. Las piezas principales:
 - `productos`, `v_listas_vigentes` — el catálogo y las listas vigentes
 - `factores_credito`, `reglas_credito` — el cálculo de cuotas
 
+## Lo que el formulario ya no pregunta
+
+Cuando el comprador se elige del desplegable, en vez de escribirlo, el
+formulario trae lo que la base ya sabe y se salta esas preguntas:
+
+| Se elige | Se trae | De dónde |
+|---|---|---|
+| un **cliente** de ventas anteriores | DNI, y las opciones de celular, correo, dirección, referencias, trabajo y RUC | `buscar_clientes` + `opciones_cliente` |
+| un **asesor** (autocompra) | DNI, y su celular, correo y RUC como opción | `datos_asesor` + `opciones_cliente` |
+
+`datos_asesor` trae la ficha de a uno, cuando la eligen: la lista del
+desplegable sigue siendo solo código y nombre, así ningún navegador se lleva
+512 DNI de golpe.
+
+Si la ficha del asesor **no** tiene DNI, se pregunta como siempre y el que se
+escriba queda guardado en su ficha (`completa_dni_asesor`). Nunca pisa un DNI
+ya cargado y exige que el nombre calce, para que un código mal elegido no
+escriba sobre otra persona. Es lo que mantiene la base al día sin que nadie la
+llene a mano; el panel de asesores tiene el filtro «Sin RUC / Sin DNI» para ver
+cuánto falta.
+
 ## Dos cosas que conviene saber antes de tocar el código
 
 - **El orden de las preguntas es el valor del formulario.** No es un
