@@ -1261,10 +1261,27 @@ function dockFotoConfirmar(dataUrl){
   w.appendChild(c); dockInner.appendChild(w);
 }
 
+/* ¿Los pagos registrados ya suman la inicial (o los S/ 70 de la afiliación)? */
+function pagosCubiertos(){
+  const total = (datos.pagos||[]).reduce((a,x)=>a+(parseFloat(x.monto)||0),0);
+  const esperado = esVenta() ? (parseFloat(datos.inicial)||0) : 70;
+  return esperado > 0 && total >= esperado - 0.01;
+}
+
 /* Los pagos ya se detallaron antes: aquí solo se recogen sus constancias */
 function preguntaOtraConstancia(){
   const n = (datos.constancias||[]).length;
   const nPagos = (datos.pagos||[]).length;
+  const seguirYa = ()=>{ dockLimpiar(); if(editando){ editando=false; irResumen(); } else { avanzar(); } };
+
+  /* El monto ya está cubierto y cada pago tiene su constancia: no queda nada
+     que preguntar. Preguntar igual era un toque de más en cada registro. Si
+     después aparece otro voucher, se agrega desde «📋 Ver». */
+  if(nPagos && n >= nPagos && pagosCubiertos()){
+    burbujaBot(n>1 ? 'Listas las <b>'+n+' constancias</b> ✅' : 'Constancia recibida ✅').then(seguirYa);
+    return;
+  }
+
   let msg;
   if(nPagos > 1 && n < nPagos){
     msg = 'Van <b>'+n+' de '+nPagos+' constancias</b>. Falta'+((nPagos-n)>1?'n':'')+' <b>'+(nPagos-n)+'</b>.<span class="peque">Registraste '+nPagos+' pagos: sube el comprobante de cada uno.</span>';
@@ -2849,7 +2866,11 @@ function pidePagoRw(n){
   function cierra(){
     datos.pagos = datos.pagos || [];
     datos.pagos.push(g);
-    const etiq = (rwMedio(datos.pagos[0].medio)||{}).etiqueta || '';
+    /* En el modo «solo la constancia» no se elige medio, y el campo salía en
+       blanco en el panel y en el PDF. Se nombra por lo que es: el medio está
+       en el voucher que va adjunto. */
+    const etiq = (rwMedio(datos.pagos[0].medio)||{}).etiqueta ||
+                 (datos.pagos[0].medio==='SOLO_CONSTANCIA' ? 'SEGÚN CONSTANCIA' : '');
     if(esVenta()) datos.ventaMedioPago = etiq; else datos.metodoPago = etiq;
     const total = datos.pagos.reduce((a,x)=>a+(parseFloat(x.monto)||0),0);
     const esperado = esVenta() ? (parseFloat(datos.inicial)||0) : 70;
@@ -4028,9 +4049,15 @@ function confirmaNuevo(nombre, seguir){
   });
 }
 
-/* ---------- 13. Cliente que ya compró antes ---------- */
+/* ---------- 13. Alguien que ya está en la base ----------
+   Se dispara al escribir el documento, cuando no se eligió del desplegable.
+   Antes volcaba todo de golpe y saltaba hasta el pedido: con eso un crédito
+   se quedaba sin referencias, sin laborales y sin lugar de entrega, y el
+   asesor se enteraba recién en el aviso de «falta completar» del final.
+   Ahora carga lo que sabemos y sigue el orden de siempre: cada pregunta
+   ofrece su dato para confirmarlo de un toque o cambiarlo. */
 async function buscaClienteConocido(){
-  const seguir = ()=>{ if(editando){ editando=false; irResumen(); } else { avanzar(); } };
+  const seguir = ()=>sigueOVuelve();
   if(!CONECTADO || !esVenta() || datos.clienteRecuperado){ seguir(); return; }
   let c = null;
   try{
@@ -4041,38 +4068,25 @@ async function buscaClienteConocido(){
   }catch(e){}
   if(!c || !c.titular){ seguir(); return; }
 
-  burbujaBot('Este cliente <b>ya está registrado</b> 🙌<span class="peque">'+escapa(c.titular)+
-    ' · última compra: '+escapa(c.ultima_compra||'—')+'</span>¿Quieres que complete sus datos automáticamente?').then(()=>{
+  /* Puede venir de una afiliación y no de una compra: se dice cuál es. */
+  const desde = c.compras > 0
+    ? 'última compra: '+escapa(c.ultima_compra||'—')
+    : 'se afilió el '+escapa(c.ultima_compra||'—');
+
+  burbujaBot('Ya lo tenemos registrado 🙌<span class="peque">'+escapa(c.titular)+' · '+desde+
+    '</span>¿Uso sus datos para no volver a escribirlos?').then(()=>{
     dockChips([
-      {t:'✅ Sí, completar sus datos', clase:'primario', fn:()=>{
-        burbujaUser('✅ Sí, completar sus datos');
+      {t:'✅ Sí, usar lo que ya tenemos', clase:'primario', fn:async ()=>{
+        burbujaUser('✅ Sí, usar lo que ya tenemos');
+        dockLimpiar();
         datos.clienteRecuperado = true;
         datos.ventaComprador = c.titular || datos.ventaComprador;
-        datos.ventaCelular = c.celular || '';
-        datos.ventaCorreo = c.correo || '';
-        datos.departamento = c.departamento || '';
-        datos.provincia = c.provincia || '';
-        datos.distrito = c.distrito || '';
-        datos.direccion = c.direccion || '';
-        if(c.conyuge && c.conyuge.nombre) datos.conyuge = c.conyuge;
-        if(Array.isArray(c.referencias) && c.referencias.length) datos.referencias = c.referencias;
-        if(Array.isArray(c.fuentes) && c.fuentes.length)
-          datos.fuentes = c.fuentes.map(f=>Object.assign({sustentos:[]}, f, {sustentos:[]}));
-        datos.trabDireccion = c.trab_direccion || '';
-        datos.trabDistrito = c.trab_distrito || '';
-        datos.trabProvincia = c.trab_provincia || '';
-        datos.trabDepartamento = c.trab_departamento || '';
-        /* Se salta lo que ya sabemos y va directo al pedido */
-        const quedan = ['producto','adicionales','inicial','pagoVenta','foto'];
-        if(esCredito()) quedan.push('cuotas');
-        quedan.push('resumen');
-        cola = quedan;
-        totalPasos = pasosHechos + quedan.length;
-        dockLimpiar();
-        burbujaBot('Listo ✅ Completé sus datos personales, dirección'+
-          ((c.referencias&&c.referencias.length)?', referencias':'')+
-          ((c.fuentes&&c.fuentes.length)?' e información laboral':'')+
-          '. Solo faltan los datos del pedido.<span class="peque">Al final podrás revisar y corregir todo.</span>').then(()=>avanzar());
+        datos.cliOpc = await rpc('opciones_cliente', {doc: datos.ventaDni}) || {};
+        /* Si el comprador es un asesor, su ficha vuelve a la mesa de opciones */
+        if(datos.fichaAsesor) sumaFichaAsesor(datos.fichaAsesor);
+        burbujaBot('Listo ✅ Te voy mostrando lo que ya sé de <b>'+escapa(primerNombre(c.titular))+
+          '</b> en cada paso.<span class="peque">Confirmas con un toque, o escribes otro dato si cambió.</span>')
+          .then(seguir);
       }},
       {t:'✍️ No, ingresar desde cero', clase:'secund', fn:()=>{
         burbujaUser('✍️ Ingresar desde cero'); dockLimpiar(); seguir();

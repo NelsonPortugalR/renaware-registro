@@ -70,6 +70,20 @@ escriba sobre otra persona. Es lo que mantiene la base al día sin que nadie la
 llene a mano; el panel de asesores tiene el filtro «Sin RUC / Sin DNI» para ver
 cuánto falta.
 
+Si el documento se escribe a mano en vez de elegirlo del desplegable, el
+formulario igual reconoce a quien ya está en la base (`buscar_cliente`,
+afiliaciones incluidas) y ofrece usar sus datos. Al aceptar **no se salta hasta
+el pedido**: sigue el orden normal y cada pregunta ofrece su dato para
+confirmarlo de un toque o cambiarlo.
+
+Un afiliado nuevo queda disponible en los tres lados el mismo día: en
+`clientes` y en el buscador de clientes (lo hace `engancha_cliente`, que corre
+para todo registro), y en la base de asesores con su ficha llena
+(`alta_asesor_desde_afiliacion`). Si la persona ya existía, esa función
+**completa los campos en blanco** y no pisa ninguno cargado; el candado contra
+duplicados mira nombre, código y DNI, porque «Helen Coska» y «HELEN KOSKA» son
+la misma señora.
+
 ## Dos cosas que conviene saber antes de tocar el código
 
 - **El orden de las preguntas es el valor del formulario.** No es un
