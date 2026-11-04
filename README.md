@@ -84,6 +84,32 @@ para todo registro), y en la base de asesores con su ficha llena
 duplicados mira nombre, código y DNI, porque «Helen Coska» y «HELEN KOSKA» son
 la misma señora.
 
+## El panel desde el celular
+
+El panel se usa tanto desde el teléfono como desde la laptop, así que las dos
+listas largas tienen dos formatos: **tabla** en pantalla ancha y **tarjetas**
+por debajo de 640 px (`pantallaChica()`). Los registros usan `filaTarjeta()` y
+los asesores `asFicha()`; en los dos casos los campos conservan las mismas
+marcas (`data-id`, y `.as-f` con `data-c` en asesores), así que abrir la ficha,
+avanzar el estado, guardar y el aviso de «cambios sin guardar» funcionan igual
+en los dos formatos. Al cruzar el umbral se repinta una sola vez —no en cada
+píxel—, para no borrar el campo que se está escribiendo.
+
+En el celular, además: la barra superior y los filtros dejan de estar fijos y
+se van con el scroll; los filtros van en una tira que se desliza de lado; la
+banda del período se compacta (la tira de 14 cuadritos no se muestra: la misma
+información va escrita al lado); y todo campo escribible llega a 16 px, que es
+lo que evita que iOS haga zoom al enfocarlo.
+
+## Lo que no está aquí
+
+La **bienvenida por WhatsApp** vive en su propio módulo
+(`renaware-bienvenida.pages.dev`), con los 5 días de mensajes, los archivos de
+cada día y el seguimiento de Nivel Cero y de clientes. El panel tenía una
+versión vieja —un solo mensaje, tablas `wa_secuencias` y `wa_mensajes`— que se
+quitó; las tablas siguen en la base, sin uso. En la ficha de un afiliado queda
+el enlace al módulo.
+
 ## Dos cosas que conviene saber antes de tocar el código
 
 - **El orden de las preguntas es el valor del formulario.** No es un

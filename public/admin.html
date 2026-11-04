@@ -333,6 +333,18 @@
   /* En pantalla ancha no cambia nada: los hijos siguen siendo hijos directos
      de la caja del modal, con el mismo reparto de alto de siempre. */
   .modal-scroll{display:contents}
+
+  /* ---------- Registros en tarjeta (celular) ---------- */
+  .regs{display:flex;flex-direction:column;gap:10px}
+  .regs-cuenta{font-size:12.5px;font-weight:700;color:var(--suave);margin:0 2px 8px}
+  .reg-card{background:var(--superficie);border:1px solid var(--linea);border-radius:12px;
+    padding:12px 13px;box-shadow:var(--sombra);cursor:pointer}
+  .reg-card.sel{border-color:var(--acero2);box-shadow:0 0 0 2px var(--acero2)33}
+  .reg-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .reg-card .tit{font-size:15.5px;font-weight:700;line-height:1.3}
+  .reg-pie{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
+  .reg-monto{margin-left:auto;font-weight:700;font-size:14.5px}
+  .reg-card .avanzar{width:100%;margin-top:10px}
   .ayuda-mas summary{cursor:pointer;font-weight:700;color:var(--acero2);margin-top:5px;
     list-style:none;display:inline-block}
   .ayuda-mas summary::before{content:'▸ '}
@@ -354,10 +366,33 @@
   @media (max-width:640px){
     body{-webkit-text-size-adjust:100%}
 
-    /* La barra superior deja de empujar y los botones se reparten */
-    .top{flex-wrap:wrap;gap:8px;padding:10px 12px}
+    /* La barra superior deja de empujar y los botones se reparten. Y deja de
+       estar fija: con la búsqueda y cuatro botones se quedaba con 190 px de
+       pantalla todo el tiempo. Ahora se va con el scroll y la lista empieza
+       mucho antes. */
+    .top{flex-wrap:wrap;gap:8px;padding:10px 12px;position:static}
     .top h1{font-size:18px}
+    .top .sub{margin-left:0}
     .btn-top{flex:1 1 calc(50% - 8px);min-height:40px;font-size:13px;padding:8px 10px;text-align:center}
+
+    /* Banda del período, compacta. La tira de 14 cuadritos dice lo mismo que
+       «Día 7 de 14 · quedan 7 días», que va escrito justo debajo. */
+    .banda{padding:10px 14px}
+    .banda-fila{flex-direction:column;gap:10px}
+    .nav-per{align-self:flex-start}
+    .per-num{font-size:23px}
+    .tira{display:none}
+    .pipe-wrap{min-width:0;width:100%}
+    .leyenda{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;margin-top:8px;font-size:12.5px}
+
+    /* Los filtros, en una tira que se desliza de lado: eran tres filas
+       apiladas, y encima fijas a una altura pensada para la laptop. */
+    .filtros{position:static;flex-wrap:nowrap;overflow-x:auto;padding:10px 12px;gap:7px;
+             -webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .filtros::-webkit-scrollbar{display:none}
+    .filtros > *{flex:0 0 auto}
+    .filtros .cuenta{display:none}   /* se muestra arriba de la lista */
+    .zona{padding:12px 12px 60px}
 
     /* Los modales ocupan la pantalla completa, sin márgenes que roban espacio */
     .modal{padding:0}
@@ -369,7 +404,18 @@
                display:flex;gap:8px;flex-wrap:wrap;
                padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
     .modal-pie button{flex:1 1 auto;min-height:44px}
-    #mlCuerpo,#waCuerpo,#anCuerpo,#asCuerpo,#dCuerpo{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+
+    /* El pie de la ficha no envolvía: «Eliminar registro» quedaba fuera de
+       la pantalla. Ahora los botones se reparten y el de eliminar va solo
+       en su línea, lejos de Guardar. */
+    .cajon-pie{flex-wrap:wrap;gap:8px;padding:10px 12px;
+               padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+    .cajon-pie button{flex:1 1 calc(50% - 8px);min-height:44px}
+    .cajon-pie .btn-borrar{flex:1 1 100%;margin-left:0}
+    .cajon-cuerpo{padding:12px 12px 32px}
+    .cajon-top{padding:12px 14px}
+    .bloque{padding:12px 13px}
+    #mlCuerpo,#anCuerpo,#asCuerpo,#dCuerpo{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
 
     /* Ninguna tabla desborda: cada una scrollea dentro de su caja */
     .tabla-scroll,#asCuerpo{overflow-x:auto}
@@ -385,13 +431,24 @@
     .modal-scroll .campos{padding:0 14px}
     .modal-scroll #asResumen{padding:0 14px}
 
-    /* 16px evita que iOS haga zoom al enfocar un campo */
-    input,select,textarea{font-size:16px;min-height:42px}
+    /* 16px evita que iOS haga zoom al enfocar un campo. El buscador, los
+       filtros y los campos de la ficha tienen su propio tamaño en el CSS
+       general, con más peso que un «input» a secas, y se escapaban. */
+    input,select,textarea,.buscar input,.fsel,
+    .campo input,.campo select,.campo textarea,
+    .lista-campos input,.lista-campos input[type=date],.as-rej input{font-size:16px;min-height:42px}
+
+    /* Las dos fechas y el interruptor de cada lista no entran en una fila */
+    .lista-campos{grid-template-columns:1fr;gap:9px}
+    .sw{white-space:normal;padding-bottom:0}
     textarea{min-height:90px}
+    .buscar{flex:1 1 100%}
+    .buscar input{width:100%}
+    .fsel{padding:8px 14px}
 
     /* Objetivos táctiles cómodos */
     button,.btn-sec,.btn-pri{min-height:44px}
-    .btn-mini{min-height:32px;padding:6px 10px}
+    .btn-mini{min-height:36px;padding:8px 12px;font-size:12.5px}
 
     /* La ficha del registro deja de ir a dos columnas apretadas */
     .dato,.res-grid{grid-template-columns:1fr}
@@ -409,7 +466,6 @@
     <span>🔍</span><input id="q" placeholder="Buscar nombre, DNI o asesor…" autocomplete="off">
   </div>
   <button class="btn-top" id="btnListas">Listas de precios</button>
-  <button class="btn-top" id="btnWa">Bienvenida WhatsApp</button>
   <button class="btn-top" id="btnAsesores">Asesores</button>
   <button class="btn-top" id="btnAnalistas">Analistas RW</button>
   <button class="btn-top" id="btnExcel">Descargar Excel</button>
@@ -536,23 +592,6 @@
     <div class="modal-pie">
       <button class="btn-sec" id="anAgregar">Agregar analista</button>
       <button class="btn-pri" id="anGuardar">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal" id="modalWa">
-  <div class="modal-caja">
-    <div class="modal-top">
-      <h2>Secuencia de bienvenida</h2>
-      <button class="cerrar" id="waCerrar">✕</button>
-    </div>
-    <p class="modal-ayuda">Configura aquí los mensajes una sola vez. Luego, en la ficha de cada afiliado,
-    aparecen listos para enviar. Puedes usar <b>{primer_nombre}</b>, <b>{nombre}</b>, <b>{asesor}</b> y
-    <b>{codigo}</b>: se reemplazan solos al enviar.</p>
-    <div id="waCuerpo"></div>
-    <div class="modal-pie">
-      <button class="btn-sec" id="waAgregar">Agregar mensaje</button>
-      <button class="btn-pri" id="waGuardar">Guardar secuencia</button>
     </div>
   </div>
 </div>
@@ -1221,6 +1260,18 @@ function pintaTabla(){
     $('#tabla').innerHTML = '<div class="vacio"><b>Sin registros con estos filtros</b>Cambia el período o limpia los filtros para ver más.</div>';
     return;
   }
+  /* En el celular la tabla de ocho columnas obligaba a arrastrar de lado en
+     la pantalla que más se mira. Cada registro pasa a ser una tarjeta; el
+     toque abre la ficha igual y el botón de avanzar queda a la mano. */
+  if(pantallaChica()){
+    /* La cuenta vive al final de la tira de filtros, que en el celular se
+       desliza de lado: ahí no se vería nunca. Va aquí, sobre la lista. */
+    $('#tabla').innerHTML =
+      '<div class="regs-cuenta">'+lista.length+(lista.length===1?' registro':' registros')+'</div>'+
+      '<div class="regs">'+lista.map(filaTarjeta).join('')+'</div>';
+    return;
+  }
+
   $('#tabla').innerHTML =
     '<table><thead><tr>'+
     '<th>Fecha</th><th>Tipo</th><th>Titular</th><th class="ocultar-chico">Asesor</th>'+
@@ -1237,6 +1288,26 @@ function pintaTabla(){
       '<td>'+chipEstado(r)+(r.estado!=='procesado'?'<button class="avanzar" data-av="'+r.id+'">→ '+ESTADOS[ORDEN.indexOf(r.estado)+1].t+'</button>':'')+'</td>'+
       '<td>'+chipResultado(r)+'</td></tr>'
     ).join('')+'</tbody></table>';
+}
+
+/* Un registro de la lista, en tarjeta. Lleva el mismo data-id que la fila de
+   la tabla, así que abrir la ficha y avanzar el estado funcionan igual. */
+function filaTarjeta(r){
+  const i = ORDEN.indexOf(r.estado);
+  const sig = (r.estado !== 'procesado' && ESTADOS[i+1]) ? ESTADOS[i+1] : null;
+  const evalua = chipResultado(r);
+  return '<div class="reg-card'+(abierto===r.id?' sel':'')+'" data-id="'+r.id+'">'+
+    '<div class="reg-cab"><span class="badge b-'+r.tipo+'">'+TIPOS[r.tipo]+'</span>'+
+      '<span class="peque mono">'+fFecha(r.fecha)+'</span></div>'+
+    '<div class="tit">'+escapa(r.titular||'')+'</div>'+
+    '<div class="peque mono">DNI '+escapa(r.dni||'')+
+      (r.asesor ? ' · '+escapa(r.asesor) : '')+'</div>'+
+    (r.producto ? '<div class="peque">'+escapa(r.producto)+'</div>' : '')+
+    '<div class="reg-pie">'+chipEstado(r)+evalua+
+      '<span class="reg-monto mono">'+soles(r.inicial)+'</span>'+
+    '</div>'+
+    (sig ? '<button class="avanzar" data-av="'+r.id+'">→ '+sig.t+'</button>' : '')+
+  '</div>';
 }
 
 /* ---------- detalle ---------- */
@@ -1677,8 +1748,18 @@ if(r.tipo !== 'afiliacion')
     '</div>';
   }
 
-  /* secuencia de bienvenida: solo en afiliaciones */
-  if(r.tipo === 'afiliacion') h += waBloqueEnvio(r);
+  /* La bienvenida por WhatsApp vive en su propio módulo desde que tiene los
+     5 días de mensajes, los archivos, el seguimiento de Nivel Cero y el de
+     clientes. Aquí quedaba la versión vieja, de un solo mensaje y sin tocar
+     desde setiembre: se fue, y en su lugar va el camino al módulo. */
+  if(r.tipo === 'afiliacion'){
+    h += '<div class="bloque"><h3>Bienvenida por WhatsApp</h3>'+
+      '<div class="ayuda" style="margin:0 0 10px">Los mensajes de bienvenida y el seguimiento '+
+      'se manejan en su propio módulo, con los archivos de cada día.</div>'+
+      '<a class="btn-sec" style="display:inline-block;text-decoration:none" target="_blank" '+
+      'rel="noopener" href="https://renaware-bienvenida.pages.dev">Abrir Bienvenida por WhatsApp</a>'+
+      '</div>';
+  }
 
   /* exportación a PE Portal (pedidos y fichas de asesor) */
   h += '<div class="bloque"><h3>Ingreso a Rena Ware</h3>'+
@@ -2087,7 +2168,6 @@ async function abrirListas(){
     $('#mlCuerpo').innerHTML = '<div style="padding:20px;color:var(--rojo)">No se pudo cargar: '+escapa(String(e.message||e).slice(0,140))+'</div>';
   }
 }
-waCarga().catch(()=>{});
 anCarga().catch(()=>{});
 $('#btnAnalistas').addEventListener('click', abrirAnalistas);
 $('#btnAsesores').addEventListener('click', abrirAsesores);
@@ -2131,34 +2211,6 @@ $('#anCuerpo').addEventListener('click', async e=>{
   ANALISTAS.splice(i,1); anPinta();
 });
 $('#btnListas').addEventListener('click', abrirListas);
-$('#btnWa').addEventListener('click', abrirWa);
-$('#waCerrar').addEventListener('click', ()=>$('#modalWa').classList.remove('on'));
-$('#modalWa').addEventListener('click', e=>{ if(e.target.id==='modalWa') $('#modalWa').classList.remove('on'); });
-$('#waGuardar').addEventListener('click', waGuarda);
-$('#waAgregar').addEventListener('click', ()=>{ waLeeFormulario(); WA_MSGS.push({texto:'',nota:''}); waPinta(); });
-$('#waCuerpo').addEventListener('click', e=>{
-  const i = +e.target.dataset.i;
-  if(e.target.classList.contains('wa-borra')){ waLeeFormulario(); WA_MSGS.splice(i,1); waPinta(); }
-  else if(e.target.classList.contains('wa-sube')){ waLeeFormulario(); const t=WA_MSGS[i]; WA_MSGS[i]=WA_MSGS[i-1]; WA_MSGS[i-1]=t; waPinta(); }
-  else if(e.target.classList.contains('wa-baja')){ waLeeFormulario(); const t=WA_MSGS[i]; WA_MSGS[i]=WA_MSGS[i+1]; WA_MSGS[i+1]=t; waPinta(); }
-  else if(e.target.classList.contains('wa-quita')){ waLeeFormulario(); WA_MSGS[i].archivo_url=null; WA_MSGS[i].archivo_nom=null; waPinta(); }
-});
-$('#waCuerpo').addEventListener('change', async e=>{
-  if(!e.target.classList.contains('wa-file')) return;
-  const f = e.target.files && e.target.files[0]; if(!f) return;
-  waLeeFormulario();
-  try{ await waSubeArchivo(+e.target.dataset.i, f); waPinta(); }
-  catch(err){ alert(String(err.message||err)); }
-});
-document.addEventListener('click', e=>{
-  if(e.target.classList.contains('wa-share')){ waComparte(e.target); return; }
-  if(!e.target.classList.contains('wa-copia')) return;
-  const t = e.target.dataset.txt || '';
-  const ok = ()=>{ const v=e.target.textContent; e.target.textContent='Copiado ✓';
-    setTimeout(()=>{ e.target.textContent=v; },1500); };
-  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, ok);
-  else ok();
-});
 $('#mlCerrar').addEventListener('click', ()=>$('#modalListas').classList.remove('on'));
 $('#modalListas').addEventListener('click', e=>{ if(e.target.id==='modalListas') $('#modalListas').classList.remove('on'); });
 $('#mlGuardar').addEventListener('click', async ()=>{
@@ -2268,8 +2320,9 @@ $('#tabla').addEventListener('click', e=>{
     if(i < ORDEN.length-1) cambiaEstado(r, ORDEN[i+1]);
     return;
   }
-  const tr = e.target.closest('tr[data-id]');
-  if(tr) abrir(tr.dataset.id);
+  /* Vale para la fila de la tabla y para la tarjeta del celular */
+  const fila = e.target.closest('[data-id]');
+  if(fila) abrir(fila.dataset.id);
 });
 
 $('#dCuerpo').addEventListener('click', e=>{
@@ -3009,198 +3062,6 @@ async function verJsonRw(r){
      que WhatsApp previsualiza, y además quedan descargables para adjuntar.
    ================================================================== */
 
-let WA_SEC = null;      // {id, nombre}
-let WA_MSGS = [];       // mensajes en edición
-
-function waTexto(t, r){
-  const nom = (r && (r.titular || r.nombre)) || '';
-  const primero = String(nom).trim().split(/\s+/)[0] || '';
-  return String(t||'')
-    .replace(/\{primer_nombre\}/g, primero)
-    .replace(/\{nombre\}/g, nom)
-    .replace(/\{asesor\}/g, (r && r.asesor) || '')
-    .replace(/\{codigo\}/g, (r && (r.codigo || r.asesorCodigo)) || '');
-}
-
-async function waCarga(){
-  const secs = await sbGet('wa_secuencias?select=*&activa=eq.true&order=creado_en&limit=1');
-  if(!secs.length){ WA_SEC = null; WA_MSGS = []; return; }
-  WA_SEC = secs[0];
-  WA_MSGS = await sbGet('wa_mensajes?select=*&secuencia_id=eq.'+WA_SEC.id+'&order=orden');
-}
-
-/* ---------- configuración ---------- */
-async function abrirWa(){
-  $('#modalWa').classList.add('on');
-  $('#waCuerpo').innerHTML = '<div style="padding:20px;color:var(--suave)">Cargando…</div>';
-  try{
-    await waCarga();
-    if(!WA_SEC){ $('#waCuerpo').innerHTML = '<div style="padding:20px">No hay secuencia configurada.</div>'; return; }
-    waPinta();
-  }catch(err){
-    $('#waCuerpo').innerHTML = '<div style="padding:20px;color:var(--rojo)">No se pudo cargar: '+escapa(String(err.message||err))+'</div>';
-  }
-}
-
-function waPinta(){
-  $('#waCuerpo').innerHTML = WA_MSGS.map((m,i)=>
-    '<div class="fuente" data-i="'+i+'">'+
-      '<div class="fuente-cab">Mensaje '+(i+1)+
-        ' <span style="float:right">'+
-        (i>0 ? '<button class="btn-mini wa-sube" data-i="'+i+'">↑</button> ' : '')+
-        (i<WA_MSGS.length-1 ? '<button class="btn-mini wa-baja" data-i="'+i+'">↓</button> ' : '')+
-        '<button class="btn-mini wa-borra" data-i="'+i+'">Eliminar</button></span>'+
-      '</div>'+
-      '<label class="campo" style="display:block"><span>Texto</span>'+
-        '<textarea class="wa-txt" data-i="'+i+'" rows="5" style="width:100%">'+escapa(m.texto||'')+'</textarea>'+
-      '</label>'+
-      '<div class="campos">'+
-        '<label class="campo"><span>Archivo adjunto (foto o PDF)</span>'+
-          '<input type="file" class="wa-file" data-i="'+i+'" accept="image/*,application/pdf"></label>'+
-        campo('Nota interna (no se envía)', m.nota||'', 'class="wa-nota" data-i="'+i+'"')+
-      '</div>'+
-      (m.archivo_url
-        ? '<div class="ayuda" style="margin-top:6px">📎 <a href="'+escapa(m.archivo_url)+'" target="_blank" rel="noopener">'+
-          escapa(m.archivo_nom||'archivo')+'</a> '+
-          '<button class="btn-mini wa-quita" data-i="'+i+'">quitar</button></div>'
-        : '')+
-    '</div>'
-  ).join('') || '<div style="padding:20px;color:var(--suave)">Sin mensajes. Pulsa «Agregar mensaje».</div>';
-}
-
-function waLeeFormulario(){
-  document.querySelectorAll('.wa-txt').forEach(t=>{ WA_MSGS[+t.dataset.i].texto = t.value; });
-  document.querySelectorAll('.wa-nota').forEach(t=>{ WA_MSGS[+t.dataset.i].nota = t.value; });
-}
-
-async function waSubeArchivo(i, file){
-  const ext = (file.name.split('.').pop()||'bin').toLowerCase();
-  const ruta = 'sec/'+Date.now()+'-'+i+'.'+ext;
-  const r = await fetch(SB_URL+'/storage/v1/object/wa-media/'+ruta, {
-    method:'POST', headers:Object.assign({}, cab(), {'Content-Type': file.type||'application/octet-stream'}),
-    body: file});
-  if(!r.ok) throw new Error('No se pudo subir el archivo');
-  WA_MSGS[i].archivo_url  = SB_URL+'/storage/v1/object/public/wa-media/'+ruta;
-  WA_MSGS[i].archivo_nom  = file.name;
-  WA_MSGS[i].archivo_tipo = file.type||'';
-}
-
-async function waGuarda(){
-  waLeeFormulario();
-  const btn = $('#waGuardar'); if(btn){ btn.disabled = true; btn.textContent='Guardando…'; }
-  try{
-    await fetch(SB_URL+'/rest/v1/wa_mensajes?secuencia_id=eq.'+WA_SEC.id,
-      {method:'DELETE', headers:cab()});
-    const filas = WA_MSGS.map((m,i)=>({
-      secuencia_id: WA_SEC.id, orden: i+1, texto: m.texto||'',
-      archivo_url: m.archivo_url||null, archivo_tipo: m.archivo_tipo||null,
-      archivo_nom: m.archivo_nom||null, nota: m.nota||null }));
-    if(filas.length){
-      const r = await fetch(SB_URL+'/rest/v1/wa_mensajes',
-        {method:'POST', headers:Object.assign({}, cab(), {'Content-Type':'application/json','Prefer':'return=minimal'}),
-         body: JSON.stringify(filas)});
-      if(!r.ok) throw new Error('HTTP '+r.status);
-    }
-    $('#modalWa').classList.remove('on');
-  }catch(err){
-    alert('No se pudo guardar: '+String(err.message||err));
-  }finally{
-    if(btn){ btn.disabled = false; btn.textContent='Guardar secuencia'; }
-  }
-}
-
-/* ---------- compartir archivos reales por WhatsApp ----------
-   navigator.share con archivos abre el selector nativo del celular y adjunta
-   la foto, el video o el PDF de verdad, no un enlace. Dos condiciones:
-   solo existe en móvil, y debe llamarse dentro del gesto del usuario. Por eso
-   los archivos se precargan al abrir la ficha: cuando el usuario toca, el
-   archivo ya está en memoria y la llamada es inmediata. */
-const WA_CACHE = new Map();   // url → File
-
-function waPuedeCompartir(){
-  return !!(navigator.canShare && navigator.share);
-}
-
-async function waTraeArchivo(url, nombre, tipo){
-  if(WA_CACHE.has(url)) return WA_CACHE.get(url);
-  const rs = await fetch(url);
-  if(!rs.ok) throw new Error('No se pudo descargar el archivo');
-  const blob = await rs.blob();
-  const f = new File([blob], nombre || 'archivo', {type: tipo || blob.type || 'application/octet-stream'});
-  WA_CACHE.set(url, f);
-  return f;
-}
-
-function waPrecarga(msgs){
-  if(!waPuedeCompartir()) return;
-  msgs.filter(m=>m.archivo_url).forEach(m=>{
-    waTraeArchivo(m.archivo_url, m.archivo_nom, m.archivo_tipo).catch(()=>{});
-  });
-}
-
-async function waComparte(btn){
-  const url = btn.dataset.url, nom = btn.dataset.nom, tipo = btn.dataset.tipo;
-  const txt = btn.dataset.txt || '';
-  const original = btn.textContent;
-  try{
-    let f = WA_CACHE.get(url);
-    if(!f){
-      btn.textContent = 'Preparando…'; btn.disabled = true;
-      f = await waTraeArchivo(url, nom, tipo);
-      btn.textContent = 'Listo, toca de nuevo'; btn.disabled = false;
-      return;   /* el fetch rompió el gesto: el segundo toque ya comparte */
-    }
-    if(!navigator.canShare({files:[f]})) throw new Error('Este navegador no permite compartir este tipo de archivo');
-    await navigator.share({files:[f], text: txt});
-    btn.textContent = 'Compartido ✓';
-    setTimeout(()=>{ btn.textContent = original; }, 1800);
-  }catch(err){
-    if(String(err.name) === 'AbortError'){ btn.textContent = original; btn.disabled = false; return; }
-    btn.disabled = false; btn.textContent = original;
-    alert('No se pudo compartir: '+String(err.message||err)+
-      '\n\nSi estás en la computadora, usa el enlace del archivo. Compartir archivos solo funciona desde el celular.');
-  }
-}
-
-/* ---------- envío desde la ficha del afiliado ---------- */
-function waBloqueEnvio(r){
-  if(!WA_MSGS.length) return '';
-  const tel = String(r.celular||'').replace(/\D/g,'');
-  const wa  = tel ? 'https://wa.me/51'+tel+'?text=' : '';
-  let h = '<div class="bloque"><h3>Bienvenida por WhatsApp</h3>'+
-    '<div class="ayuda" style="margin:0 0 10px">El primero abre el chat con el texto puesto. '+
-    'Los siguientes se copian y se pegan en ese mismo chat, sin salir de WhatsApp.'+
-    (waPuedeCompartir()
-      ? ' Las fotos, videos y PDF se envían como archivo real con «Enviar archivo por WhatsApp».'
-      : ' <b>Desde la computadora los archivos viajan como enlace.</b> Para enviarlos como archivo real, abre este panel en el celular.')+
-    '</div>';
-  const puedeCompartir = waPuedeCompartir();
-  waPrecarga(WA_MSGS);
-  WA_MSGS.forEach((m,i)=>{
-    /* En el celular se adjunta el archivo de verdad, así que el texto va limpio.
-       En la computadora no hay Web Share: ahí el enlace sí se incluye. */
-    const soloTexto = waTexto(m.texto, r);
-    const txt = soloTexto + ((m.archivo_url && !puedeCompartir) ? '\n' + m.archivo_url : '');
-    h += '<div class="fuente"><div class="fuente-cab">Mensaje '+(i+1)+
-      (m.nota ? ' <span class="peque">· '+escapa(m.nota)+'</span>' : '')+'</div>'+
-      '<div style="white-space:pre-wrap;font-size:13px;margin:6px 0">'+escapa(txt)+'</div>'+
-      (m.archivo_url ? '<div class="ayuda">📎 <a href="'+escapa(m.archivo_url)+'" target="_blank" rel="noopener">'+
-        escapa(m.archivo_nom||'archivo')+'</a></div>' : '')+
-      (i===0 && wa
-        ? '<a class="btn-sec" style="display:inline-block;margin-top:8px;text-decoration:none" target="_blank" rel="noopener" href="'+
-          wa+encodeURIComponent(soloTexto)+'">Abrir WhatsApp con este mensaje</a>'
-        : '<button class="btn-sec wa-copia" data-txt="'+escapa(soloTexto)+'" style="margin-top:8px">Copiar mensaje '+(i+1)+'</button>')+
-      (m.archivo_url && puedeCompartir
-        ? ' <button class="btn-pri wa-share" style="margin-top:8px"'+
-          ' data-url="'+escapa(m.archivo_url)+'" data-nom="'+escapa(m.archivo_nom||'archivo')+'"'+
-          ' data-tipo="'+escapa(m.archivo_tipo||'')+'" data-txt="'+escapa(soloTexto)+'">'+
-          'Enviar archivo por WhatsApp</button>'
-        : '')+
-      '</div>';
-  });
-  if(!tel) h += '<div class="ayuda" style="color:var(--rojo)">Este registro no tiene celular: no se puede abrir el chat.</div>';
-  return h + '</div>';
-}
 
 
 /* ==================================================================
@@ -3378,7 +3239,7 @@ function asPinta(){
     d: directos[a.id] || 0
   });
 
-  if(asPantallaChica()){
+  if(pantallaChica()){
     $('#asCuerpo').innerHTML = lista.slice(0,300).map(a=>asFicha(a, datosFila(a))).join('')+
       (lista.length>300 ? '<div class="ayuda" style="padding:8px">Mostrando los primeros 300. Afina la búsqueda para ver el resto.</div>' : '');
     return;
@@ -3432,7 +3293,7 @@ function asPinta(){
    Los inputs llevan las mismas marcas que en la tabla (.as-f, data-c,
    data-id), así que guardar, avisar de cambios sin guardar y saltar al
    campo del nombre al agregar funcionan sin tocar nada más. */
-function asPantallaChica(){
+function pantallaChica(){
   return window.matchMedia('(max-width:640px)').matches;
 }
 
@@ -3484,7 +3345,10 @@ function asFicha(a, info){
    se cruza el umbral: repintar en cada píxel borraría el campo en edición. */
 if(window.matchMedia){
   const mq = window.matchMedia('(max-width:640px)');
-  const alCambiar = ()=>{ if(document.getElementById('modalAsesores').classList.contains('on')) asPinta(); };
+  const alCambiar = ()=>{
+    if(document.getElementById('modalAsesores').classList.contains('on')) asPinta();
+    if(typeof DATOS !== 'undefined' && DATOS.length) pintaTabla();
+  };
   if(mq.addEventListener) mq.addEventListener('change', alCambiar);
   else if(mq.addListener) mq.addListener(alCambiar);
 }
