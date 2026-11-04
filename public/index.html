@@ -761,27 +761,40 @@ const PASOS = {
   },
   ventaComprador:{
     tipo:'texto', inputmode:'text',
+    /* El comprador puede ser cualquiera de los dos, y en cualquier venta: un
+       cliente de antes, o un asesor del equipo —que también compra, sea
+       autocompra o no—. Las dos listas se juntan y la misma persona sale una
+       sola vez: el asesor que ya compró trae su código y su historial en la
+       misma fila, no en dos. */
     async sugerencias(q){
-      const out = [];
-      /* En autocompra el comprador es un asesor del equipo */
-      if(datos.ventaTipo === 'Autocompra'){
-        const eq = await listaAsesores();
-        (eq||[]).filter(a=>coincidePalabras(a.nombre, q)).slice(0,4).forEach(a=>out.push({
-          t: a.nombre, sub: 'Asesor'+(a.codigo?' · código '+a.codigo:''),
-          fn: ()=>{ burbujaUser(a.nombre); dockLimpiar(); aplicaAsesor(a); }
-        }));
-      }
-      /* Y siempre, los clientes de ventas anteriores */
-      const cl = await rpc('buscar_clientes', {q: q});
-      (cl||[]).slice(0,5).forEach(c=>out.push({
-        t: c.titular,
-        sub: 'DNI '+c.dni+' · última compra '+(c.ultima||'').split('-').reverse().join('/')+
-             (c.versiones>1 ? ' · '+c.versiones+' juegos de datos' : ''),
-        fn: ()=>{ burbujaUser(c.titular); dockLimpiar();
-                  datos.ventaComprador = c.titular;
-                  aplicaCliente(c); }
+      const esAuto = datos.ventaTipo === 'Autocompra';
+      const [eq, cl] = await Promise.all([listaAsesores(), rpc('buscar_clientes', {q:q})]);
+      const asesores = (eq||[]).filter(a=>coincidePalabras(a.nombre, q));
+      const yaSalio = new Set();
+      const filas = [];
+
+      (cl||[]).slice(0,6).forEach(c=>{
+        const a = asesores.find(x=>mismaPersona(x.nombre, c.titular));
+        if(a) yaSalio.add(a.nombre);
+        filas.push({
+          esAsesor: !!a,
+          t: c.titular,
+          sub: (a ? 'Asesor'+(a.codigo?' '+a.codigo:'')+' · ' : '')+
+               'DNI '+c.dni+' · última compra '+(c.ultima||'').split('-').reverse().join('/')+
+               (c.versiones>1 ? ' · '+c.versiones+' juegos de datos' : ''),
+          fn: ()=>{ burbujaUser(c.titular); dockLimpiar(); aplicaCliente(c, esAuto ? a : null); }
+        });
+      });
+
+      asesores.filter(a=>!yaSalio.has(a.nombre)).slice(0,4).forEach(a=>filas.push({
+        esAsesor: true,
+        t: a.nombre, sub: 'Asesor'+(a.codigo?' · código '+a.codigo:'')+' · sin compras registradas',
+        fn: ()=>{ burbujaUser(a.nombre); dockLimpiar(); aplicaAsesor(a); }
       }));
-      return out;
+
+      /* En autocompra el comprador es un asesor: esos van primero */
+      if(esAuto) filas.sort((x,y)=>(y.esAsesor?1:0)-(x.esAsesor?1:0));
+      return filas;
     },
     placeholder:'Nombre y dos apellidos',
     pregunta:()=> datos.ventaTipo==='Autocompra'
@@ -3736,11 +3749,24 @@ async function rpc(nombre, cuerpo){
    OPCIONES de cada campo. Nada se vuelca de golpe: cada paso ofrece lo que ya
    sabemos cuando llega su turno, porque un mismo cliente puede tener dos
    direcciones, tres referencias y dos trabajos distintos según la compra. */
-async function aplicaCliente(c){
+async function aplicaCliente(c, asesor){
   datos.ventaComprador = c.titular || datos.ventaComprador;
   datos.ventaDni       = c.dni || '';
-  datos.tipoDocumento  = 'DNI';
   datos.cliOpc         = await rpc('opciones_cliente', {doc: c.dni});
+
+  /* El campo era «tipoDocumento», que no lo lee nadie: el resto del
+     formulario usa «tipoDoc». Elegir del desplegable a alguien con carné de
+     extranjería lo registraba como DNI. El tipo sale de sus registros. */
+  const tipoGuardado = (datos.cliOpc && datos.cliOpc.tipo_documento) || '';
+  datos.tipoDoc = tipoGuardado === 'CE' ? 'CE' : 'DNI';
+
+  /* Si además es asesor del equipo y esto es una autocompra, se toma su
+     código y su ficha entra entre las opciones (celular, correo, RUC). */
+  if(asesor){
+    if(asesor.codigo && !String(asesor.codigo).startsWith('PEND-')) datos.asesorCodigo = asesor.codigo;
+    const f = await rpc('datos_asesor', {cod: asesor.codigo || '', nom: asesor.nombre});
+    if(f){ datos.fichaAsesor = f; sumaFichaAsesor(f); }
+  }
 
   quitaDeLaCola(['ventaComprador','tipoDocumento','ventaDni']);
 
@@ -3788,7 +3814,11 @@ function sigueOVuelve(){
    preguntas no se hacen. Lo que la ficha no tenga se pregunta como siempre. */
 async function aplicaAsesor(a){
   datos.ventaComprador = a.nombre;
-  if(a.codigo && !String(a.codigo).startsWith('PEND-')) datos.asesorCodigo = a.codigo;
+  /* El código del asesor es el de quien VENDE. En la autocompra son la misma
+     persona; en una venta a terceros el comprador puede ser asesor también, y
+     tomar su código le quitaría la venta a quien la hizo. */
+  if(datos.ventaTipo === 'Autocompra' && a.codigo && !String(a.codigo).startsWith('PEND-'))
+    datos.asesorCodigo = a.codigo;
 
   const f = await rpc('datos_asesor', {cod: a.codigo || '', nom: a.nombre}) || {};
   datos.fichaAsesor = f;
@@ -3977,6 +4007,17 @@ async function listaAsesores(){
 function coincidePalabras(texto, consulta){
   const t = normTxt(texto);
   return normTxt(consulta).split(/\s+/).filter(Boolean).every(w => t.includes(w));
+}
+
+/* ¿Son la misma persona escrita distinto? Dos palabras largas compartidas,
+   sin importar el orden ni las tildes: «Helen Coska Cordova» y «HELEN KOSKA
+   CORDOVA» sí; «Flores Jahuira» y «Mamani Jahuira» no, que comparten una
+   sola. Es la misma regla que mismo_nombre() en la base, para que el
+   formulario y las consultas digan lo mismo. */
+function mismaPersona(a, b){
+  const palabras = s => normTxt(s).replace(/,/g,' ').split(/\s+/).filter(w=>w.length>=4);
+  const A = palabras(a), B = new Set(palabras(b));
+  return A.filter(w=>B.has(w)).length >= 2;
 }
 
 /* Escribe el nombre y, si hay coincidencias en el equipo, aparecen debajo.

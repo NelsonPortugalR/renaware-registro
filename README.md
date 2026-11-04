@@ -57,7 +57,15 @@ formulario trae lo que la base ya sabe y se salta esas preguntas:
 | Se elige | Se trae | De dónde |
 |---|---|---|
 | un **cliente** de ventas anteriores | DNI, y las opciones de celular, correo, dirección, referencias, trabajo y RUC | `buscar_clientes` + `opciones_cliente` |
-| un **asesor** (autocompra) | DNI, y su celular, correo y RUC como opción | `datos_asesor` + `opciones_cliente` |
+| un **asesor** | DNI, y su celular, correo y RUC como opción | `datos_asesor` + `opciones_cliente` |
+
+Las dos listas salen juntas en la misma pregunta y en cualquier tipo de venta:
+un asesor del equipo también compra, y no siempre para sí mismo. La misma
+persona aparece **una sola vez** (`mismaPersona()`, dos palabras largas
+compartidas, igual que `mismo_nombre()` en la base): si el asesor ya compró, su
+fila trae el código y el historial juntos. El código del asesor solo se toma
+como propio en la **autocompra**; en una venta a terceros ese campo es de quien
+vende.
 
 `datos_asesor` trae la ficha de a uno, cuando la eligen: la lista del
 desplegable sigue siendo solo código y nombre, así ningún navegador se lleva
@@ -118,3 +126,17 @@ el enlace al módulo.
 - **Un `node --check` no alcanza.** Varias veces pasó código sintácticamente
   válido que llamaba a una función inexistente y rompía el formulario en
   producción. Hay que abrirlo en un navegador y recorrerlo antes de publicar.
+- **El formulario entra como `anon`.** Toda función que llame necesita
+  `grant execute … to anon`, y un `drop`+`create` para cambiarle la firma se
+  lleva el permiso por delante. Cuando pase, no hay error visible: `rpc()`
+  traga el 403 y el desplegable sale vacío, como si no hubiera nadie. Así
+  estuvo `buscar_clientes`. Para comprobarlo de una:
+
+  ```sql
+  select p.proname, has_function_privilege('anon', p.oid, 'execute')
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public'
+    and p.proname in ('buscar_clientes','buscar_cliente','opciones_cliente',
+                      'listar_asesores','datos_asesor','completa_dni_asesor',
+                      'buscar_asesor','crear_registro','zc_claves_inei');
+  ```
