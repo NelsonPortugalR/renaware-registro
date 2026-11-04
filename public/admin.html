@@ -310,6 +310,35 @@
   .btn-mini{font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--borde,#ddd);background:transparent;color:inherit;cursor:pointer}
   .modal-pie{border-top:1px solid var(--linea);background:var(--superficie);padding:12px 20px;
     display:flex;gap:12px;align-items:center;border-radius:0 0 16px 16px}
+
+  /* ---------- Fichas de asesor (celular) ----------
+     La tabla de once columnas obliga a arrastrar de lado para escribir un
+     RUC. En pantalla angosta cada asesor es una ficha y todo cae a la vista.
+     Los campos son los mismos (.as-f con data-c y data-id), así que guardar
+     y marcar cambios funciona igual en los dos formatos. */
+  .as-card{background:var(--superficie);border:1px solid var(--linea);border-radius:12px;
+    padding:12px 13px;margin-bottom:10px;box-shadow:var(--sombra)}
+  .as-card.nueva{border-color:#2EA043;background:rgba(46,160,67,.08)}
+  .as-card .as-nom{width:100%;font-size:16px;font-weight:700;background:transparent;
+    border:0;border-bottom:1.5px solid var(--linea);padding:4px 0 7px;color:inherit}
+  .as-rej{display:grid;grid-template-columns:1fr 1fr;gap:9px 12px;margin-top:11px}
+  .as-rej .ancho{grid-column:1/-1}
+  .as-rej label{display:block}
+  .as-rej label span{display:block;font-size:11px;font-weight:700;color:var(--suave);margin-bottom:3px}
+  .as-rej input{width:100%;background:var(--papel);border:1.5px solid var(--linea);
+    border-radius:8px;padding:8px 9px;color:inherit}
+  .as-rej input:focus{border-color:var(--acero2);outline:none}
+  .as-rej input.ojo{border-color:var(--acento,#c98a2e);background:rgba(201,138,46,.12)}
+  .as-pie{margin-top:10px;font-size:11.5px;color:var(--suave);line-height:1.45}
+  /* En pantalla ancha no cambia nada: los hijos siguen siendo hijos directos
+     de la caja del modal, con el mismo reparto de alto de siempre. */
+  .modal-scroll{display:contents}
+  .ayuda-mas summary{cursor:pointer;font-weight:700;color:var(--acero2);margin-top:5px;
+    list-style:none;display:inline-block}
+  .ayuda-mas summary::before{content:'▸ '}
+  .ayuda-mas[open] summary::before{content:'▾ '}
+  .ayuda-mas summary::-webkit-details-marker{display:none}
+  .as-nueva-tag{font-size:11px;font-weight:700;color:#2EA043;margin-bottom:4px}
   @media (max-width:900px){
     .campos{grid-template-columns:1fr}
     .banda-fila{gap:16px}
@@ -334,7 +363,8 @@
     .modal{padding:0}
     .modal-caja{width:100%!important;max-width:100%!important;border-radius:0;
                 max-height:100dvh;height:100dvh;display:flex;flex-direction:column}
-    .modal-top{position:sticky;top:0;z-index:5;background:var(--papel)}
+    /* El título va en blanco: pintarlo sobre papel lo dejaba ilegible */
+    .modal-top{position:sticky;top:0;z-index:5}
     .modal-pie{position:sticky;bottom:0;z-index:5;background:var(--papel);
                display:flex;gap:8px;flex-wrap:wrap;
                padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
@@ -344,6 +374,16 @@
     /* Ninguna tabla desborda: cada una scrollea dentro de su caja */
     .tabla-scroll,#asCuerpo{overflow-x:auto}
     table{min-width:520px}
+
+    /* La explicación, los filtros y la lista scrollean juntos: al bajar, las
+       fichas se quedan con casi toda la pantalla. Antes la lista vivía en una
+       franja de 365 px con el resto ocupado por texto y filtros fijos. */
+    .modal-scroll{display:block;flex:1 1 auto;min-height:0;overflow:auto;
+                  -webkit-overflow-scrolling:touch}
+    #asCuerpo{max-height:none!important;overflow:visible!important;flex:none}
+    .modal-ayuda{padding:10px 14px 2px;font-size:12.5px}
+    .modal-scroll .campos{padding:0 14px}
+    .modal-scroll #asResumen{padding:0 14px}
 
     /* 16px evita que iOS haga zoom al enfocar un campo */
     input,select,textarea{font-size:16px;min-height:42px}
@@ -445,13 +485,18 @@
       <h2>Asesores del equipo</h2>
       <button class="cerrar" id="asCerrar">✕</button>
     </div>
-    <p class="modal-ayuda">La base que alimenta el buscador del formulario. Escribe para filtrar por
-    nombre, código, distrito o correo: las palabras pueden ir en cualquier orden.<br>
+    <!-- En el celular este bloque es uno solo que scrollea: la explicación y
+         los filtros se van hacia arriba y la lista se queda con la pantalla.
+         En la laptop, display:contents lo deja tal como estaba. -->
+    <div class="modal-scroll">
+    <div class="modal-ayuda">La base que alimenta el buscador del formulario. Escribe para filtrar por
+    nombre, código, distrito o correo: las palabras pueden ir en cualquier orden.
+    <details class="ayuda-mas"><summary>Cómo funciona el código</summary>
     Un <b>código de Rena Ware tiene de 5 a 7 dígitos</b>. Si el asesor todavía no lo tiene se guarda
     su <b>DNI (8 dígitos)</b> para poder emitir el PDF; esos salen marcados en ámbar y el filtro
     «falta el código real» los junta para ir reemplazándolos. Al poner el código real, el DNI se
-    conserva solo en su columna. <b>DNI</b> y <b>fecha de nacimiento</b> se llenan aquí a mano cuando
-    faltan.</p>
+    conserva solo en su campo. <b>DNI</b> y <b>fecha de nacimiento</b> se llenan aquí a mano cuando
+    faltan.</details></div>
     <div class="campos" style="margin-bottom:10px">
       <label class="campo" style="flex:2"><span>Buscar</span>
         <input id="asBuscar" placeholder="Ej.: elena tacna, o 1723832"></label>
@@ -471,6 +516,7 @@
     </div>
     <div id="asResumen" class="ayuda" style="margin-bottom:8px"></div>
     <div id="asCuerpo" style="max-height:55vh;overflow:auto"></div>
+    </div>
     <div class="modal-pie">
       <button class="btn-sec" id="asAgregar">Agregar asesor</button>
       <button class="btn-pri" id="asGuardar">Guardar cambios</button>
@@ -3326,6 +3372,18 @@ function asPinta(){
 
   if(!lista.length){ $('#asCuerpo').innerHTML = '<div style="padding:20px;color:var(--suave)">Sin resultados.</div>'; return; }
 
+  const datosFila = a => ({
+    pat: a.patrocinador_id && porId[a.patrocinador_id] ? porId[a.patrocinador_id].nombre : '',
+    n: AS_VENTAS[rwNorm(a.nombre)] || 0,
+    d: directos[a.id] || 0
+  });
+
+  if(asPantallaChica()){
+    $('#asCuerpo').innerHTML = lista.slice(0,300).map(a=>asFicha(a, datosFila(a))).join('')+
+      (lista.length>300 ? '<div class="ayuda" style="padding:8px">Mostrando los primeros 300. Afina la búsqueda para ver el resto.</div>' : '');
+    return;
+  }
+
   $('#asCuerpo').innerHTML =
    '<div class="tabla-scroll"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
    '<thead><tr style="text-align:left;position:sticky;top:0;background:var(--fondo,#111)">'+
@@ -3368,6 +3426,67 @@ function asPinta(){
    }).join('')+
    '</tbody></table></div>'+
    (lista.length>300 ? '<div class="ayuda" style="padding:8px">Mostrando los primeros 300. Afina la búsqueda para ver el resto.</div>' : '');
+}
+
+/* ---------- La misma lista, en ficha, para el celular ----------
+   Los inputs llevan las mismas marcas que en la tabla (.as-f, data-c,
+   data-id), así que guardar, avisar de cambios sin guardar y saltar al
+   campo del nombre al agregar funcionan sin tocar nada más. */
+function asPantallaChica(){
+  return window.matchMedia('(max-width:640px)').matches;
+}
+
+function asCampo(a, campo, etiq, extra){
+  const o = extra || {};
+  return '<label'+(o.ancho?' class="ancho"':'')+'><span>'+escapa(etiq)+'</span>'+
+    '<input class="as-f'+(o.clase?' '+o.clase:'')+'" data-c="'+campo+'" data-id="'+a.id+'"'+
+      (o.tipo?' type="'+o.tipo+'"':'')+
+      (o.modo?' inputmode="'+o.modo+'"':'')+
+      (o.max?' maxlength="'+o.max+'"':'')+
+      (o.placeholder?' placeholder="'+escapa(o.placeholder)+'"':'')+
+      (o.title?' title="'+escapa(o.title)+'"':'')+
+      ' value="'+escapa(a[campo]||'')+'"></label>';
+}
+
+function asFicha(a, info){
+  const falta = !esCodigoReal(a.codigo_asesor);
+  const aviso = !falta ? ''
+    : esDniProvisional(a.codigo_asesor)
+      ? 'Es un DNI, no un código. Reemplázalo cuando Rena Ware le asigne el suyo.'
+      : 'Sin código. Pon el de Rena Ware, o su DNI mientras tanto.';
+  const pie = [
+    [a.distrito, a.departamento].filter(Boolean).join(' · '),
+    a.ingreso_fecha ? 'ingresó '+a.ingreso_fecha : '',
+    info.pat ? 'patrocina: '+info.pat : '',
+    info.d ? info.d+' directos' : '',
+    info.n ? info.n+' ventas' : ''
+  ].filter(Boolean).join(' · ');
+
+  return '<div class="as-card'+(a.esNuevo?' nueva':'')+'" data-id="'+a.id+'">'+
+    (a.esNuevo ? '<div class="as-nueva-tag">nuevo · sin guardar</div>' : '')+
+    '<input class="as-f as-nom" data-c="nombre" data-id="'+a.id+'" '+
+      'placeholder="Nombre y dos apellidos" value="'+escapa(a.nombre||'')+'">'+
+    (aviso ? '<div class="as-nueva-tag" style="color:var(--acento,#c98a2e);margin-top:6px">⚠️ '+escapa(aviso)+'</div>' : '')+
+    '<div class="as-rej">'+
+      asCampo(a,'codigo_asesor','Código', {clase:'mono'+(falta?' ojo':''), modo:'numeric', max:8, placeholder:'código o DNI'})+
+      asCampo(a,'dni','DNI',              {clase:'mono', modo:'numeric', max:8, placeholder:'8 dígitos'})+
+      asCampo(a,'ruc','RUC',              {clase:'mono', modo:'numeric', max:11, ancho:true, placeholder:'11 dígitos',
+                                           title: a.dni && !a.ruc ? 'Sugerido para persona natural: 10'+a.dni+'0' : ''})+
+      asCampo(a,'celular','Celular',      {clase:'mono', modo:'tel', placeholder:'9 dígitos'})+
+      asCampo(a,'nacimiento','Nacimiento',{clase:'mono', tipo:'date'})+
+      asCampo(a,'correo','Correo',        {ancho:true, tipo:'email', placeholder:'nombre@gmail.com'})+
+    '</div>'+
+    (pie ? '<div class="as-pie">'+escapa(pie)+'</div>' : '')+
+  '</div>';
+}
+
+/* Si el teléfono gira o la ventana cambia de tamaño, se repinta solo cuando
+   se cruza el umbral: repintar en cada píxel borraría el campo en edición. */
+if(window.matchMedia){
+  const mq = window.matchMedia('(max-width:640px)');
+  const alCambiar = ()=>{ if(document.getElementById('modalAsesores').classList.contains('on')) asPinta(); };
+  if(mq.addEventListener) mq.addEventListener('change', alCambiar);
+  else if(mq.addListener) mq.addListener(alCambiar);
 }
 
 /* Qué se puede poner en el campo del código: el de Rena Ware (5 a 7 dígitos)
