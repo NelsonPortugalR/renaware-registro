@@ -4015,7 +4015,7 @@ async function aplicaCliente(c, asesor){
 
   burbujaBot('Listo ✅ <b>'+escapa(c.titular)+'</b>, DNI '+escapa(c.dni)+'.'+
     (cuenta.length
-      ? '<span class="peque">De sus compras anteriores tengo '+escapa(cuenta.join(', '))+
+      ? '<span class="peque">De lo que ya tengo suyo: '+escapa(cuenta.join(', '))+
         '. Te los iré mostrando a medida que avancemos, por si sirven.</span>'
       : '')).then(()=>sigueOVuelve());
 }
@@ -4087,7 +4087,7 @@ async function aplicaAsesor(a){
   burbujaBot('Listo ✅ <b>'+escapa(a.nombre)+'</b>'+
     (a.codigo ? ' · asesor '+escapa(a.codigo) : '')+
     '<span class="peque">DNI '+escapa(dni)+', de su ficha de asesor'+
-    (cuenta.length ? '. Y de sus compras anteriores tengo '+escapa(cuenta.join(', ')) : '')+
+    (cuenta.length ? '. Y de lo que ya tengo suyo: '+escapa(cuenta.join(', ')) : '')+
     '. Si algo no cuadra, lo corriges desde «📋 Ver».</span>').then(()=>sigueOVuelve());
 }
 
@@ -4130,6 +4130,54 @@ function sumaFichaAsesor(f){
   if(/^(10|15|17|20)[0-9]{9}$/.test(soloDigitos(f.ruc)) && !yaEsta('factura', f.ruc, 'ruc'))
     pon('factura', {ruc: soloDigitos(f.ruc), ruc_tipo: soloDigitos(f.ruc).slice(0,2),
                     razon_social: ''});
+}
+
+/* ---------- La ciudad de un pedido, convertida en ubigeo ----------
+   Las compras hechas fuera de este formulario viven en Pedidos y guardan la
+   ciudad como texto: «Majes, Caylloma», a veces con el departamento y el país
+   detrás, a veces solo el nombre. Se resuelve contra la lista de distritos del
+   país —la misma del desplegable—; si no calza o queda ambiguo se devuelve
+   vacío y el formulario pregunta el distrito como siempre. */
+let _indiceUbigeo = null;
+function indiceUbigeo(){
+  if(_indiceUbigeo) return _indiceUbigeo;
+  const m = new Map();
+  Object.keys(UBIGEO).forEach(dep=>Object.keys(UBIGEO[dep]).forEach(prov=>
+    UBIGEO[dep][prov].forEach(dist=>{
+      const k = normTxt(dist);
+      if(!m.has(k)) m.set(k, []);
+      m.get(k).push({departamento:dep, provincia:prov, distrito:dist});
+    })));
+  _indiceUbigeo = m;
+  return m;
+}
+/* Nombres con los que Rena Ware escribe algunos distritos */
+const ALIAS_DISTRITO = {'cercado':'arequipa', 'hunter':'jacobo hunter'};
+function resuelveCiudad(txt){
+  const vacio = {departamento:'', provincia:'', distrito:''};
+  const partes = String(txt||'').split(',').map(s=>normTxt(s)).filter(Boolean);
+  if(!partes.length) return vacio;
+  const idx = indiceUbigeo();
+  const prueba = (d, p)=>{
+    const lista = idx.get(ALIAS_DISTRITO[d] || d) || [];
+    if(!lista.length) return null;
+    if(p){
+      const exacto = lista.filter(x=>normTxt(x.provincia) === p);
+      if(exacto.length === 1) return exacto[0];
+      if(exacto.length > 1) return null;
+    }
+    if(lista.length === 1) return lista[0];
+    /* El mismo nombre en varias provincias solo vale si una es la capital de
+       la suya: «Piura» o «Tacna» a secas son esas. */
+    const cap = lista.filter(x=>normTxt(x.distrito) === normTxt(x.provincia));
+    return cap.length === 1 ? cap[0] : null;
+  };
+  return prueba(partes[0], partes[1]) || prueba(partes[0], '') || vacio;
+}
+function ubigeoDe(it){
+  if(it && it.distrito)
+    return {departamento:it.departamento||'', provincia:it.provincia||'', distrito:it.distrito};
+  return resuelveCiudad(it && it.ciudad);
 }
 
 /* ---------- Documentos que ya subió antes ----------
@@ -4202,13 +4250,24 @@ function intentaConocidas(id){
     pregunta:n=> n>1
       ? 'Tiene <b>'+n+' direcciones</b> registradas. ¿Cuál corresponde a esta venta?'
       : '¿La entrega va a la <b>dirección que ya tenemos</b>?',
-    etiqueta:it=>'📍 '+escapa(it.direccion)+'<br><span class="peque">'+
-      escapa([it.distrito,it.provincia,it.departamento].filter(Boolean).join(' · '))+'</span>',
+    etiqueta:it=>{
+      const u = ubigeoDe(it);
+      return '📍 '+escapa(it.direccion)+'<br><span class="peque">'+
+        escapa([u.distrito,u.provincia,u.departamento].filter(Boolean).join(' · ')
+               || it.ciudad || '')+'</span>';
+    },
     resumen:it=>'📍 '+it.direccion,
     aplicar:it=>{
-      datos.direccion=it.direccion; datos.departamento=it.departamento;
-      datos.provincia=it.provincia; datos.distrito=it.distrito;
-      cola = cola.filter(k=>k!=='ubicacion' && k!=='direccion');
+      const u = ubigeoDe(it);
+      datos.direccion = it.direccion;
+      if(u.distrito){
+        datos.departamento=u.departamento; datos.provincia=u.provincia; datos.distrito=u.distrito;
+        cola = cola.filter(k=>k!=='ubicacion' && k!=='direccion');
+      }else{
+        /* La dirección sirve igual, pero sin ubigeo reconocido no se puede
+           decidir la zona de crédito: se queda la pregunta del distrito. */
+        cola = cola.filter(k=>k!=='direccion');
+      }
       seguir();
     }});
 

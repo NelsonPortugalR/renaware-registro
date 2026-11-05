@@ -78,6 +78,17 @@ escriba sobre otra persona. Es lo que mantiene la base al día sin que nadie la
 llene a mano; el panel de asesores tiene el filtro «Sin RUC / Sin DNI» para ver
 cuánto falta.
 
+**También cuenta lo que compró por fuera.** Mucha gente compró antes sin pasar
+por este formulario: esas órdenes viven en `crm_pedidos`, con la dirección a la
+que Rena Ware entregó. `opciones_cliente` las engancha por la ficha de cliente
+(`clientes.doc_clave`) y ofrece esa dirección, el celular y el correo como una
+opción más, marcada «de su pedido del …». La ciudad viene como texto —«Majes,
+Caylloma»— y el ubigeo lo resuelve el formulario con `resuelveCiudad()` contra
+la lista de distritos del país, la misma del desplegable; si no calza, la
+dirección se usa igual pero se sigue preguntando el distrito, porque de él
+depende la zona de crédito. `buscar_cliente` también los reconoce, así que
+escribir el DNI a mano encuentra a quien solo tiene pedidos.
+
 **Los documentos también se reusan.** Un recibo de servicios o un sustento de
 ingreso que ya subió en otra compra sigue en el bucket, así que se ofrece con
 su fecha y viaja con el registro nuevo **por su ruta, sin volver a subirlo**: el
