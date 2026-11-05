@@ -132,6 +132,18 @@ el enlace al módulo.
 - **El orden de las preguntas es el valor del formulario.** No es un
   formulario abierto a propósito: preguntar de a uno es lo que evita errores.
   Para corregir sin perder el hilo está la pestaña «📋 Ver», no el desorden.
+- **Un toque, una respuesta.** Mientras la siguiente burbuja se escribe, los
+  botones de la pregunta anterior siguen en pantalla. Un segundo toque
+  respondía dos veces y el formulario saltaba un paso: de ahí salían las
+  respuestas duplicadas y la sensación de que «se traba». El dock se cierra
+  con el primer toque (`tomaDock()`) y se abre cuando se pinta el siguiente
+  (`dockLimpiar()`); los botones que abren el selector de archivos llevan
+  `noBloquea:true`, y hay un reloj de 6 s por si algún camino no repinta.
+- **Las fotos viven en localStorage y ahí caben unos 5 MB.** Cuando no entran,
+  `escribeBorradores()` aligera primero los borradores parados, después los
+  suelta enteros del más viejo al más nuevo, y **solo al final** guarda el
+  activo sin fotos, avisando en pantalla. El activo nunca pierde sus fotos en
+  silencio: eso era lo que obligaba a volver a subir el recibo tras recargar.
 - **Un `node --check` no alcanza.** Varias veces pasó código sintácticamente
   válido que llamaba a una función inexistente y rompía el formulario en
   producción. Hay que abrirlo en un navegador y recorrerlo antes de publicar.

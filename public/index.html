@@ -86,7 +86,8 @@
   .hoja-val{font-size:14px;color:#17323F;flex:1;word-break:break-word;line-height:1.35}
   .hoja-val.vacio{color:#B3C0C9;font-style:italic}
   .hoja-lapiz{font-size:13px;opacity:.5;flex-shrink:0}
-  .hoja-pie{padding:10px 14px 14px;border-top:1px solid #E6EDF2;flex-shrink:0}
+  .hoja-pie{padding:10px 14px 14px;border-top:1px solid #E6EDF2;flex-shrink:0;
+            display:flex;flex-direction:column;gap:8px}
   .hoja-pie .chip{width:100%}
   .progreso-barra{flex:1;height:8px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
   .progreso-fill{height:100%;width:0%;background:linear-gradient(90deg,#7FC4EE,#BFE3F7);border-radius:99px;transition:width .5s ease}
@@ -477,9 +478,39 @@ function escribeBorradores(m){
     const m2 = {};
     Object.keys(m).forEach(k=>{ m2[k] = (k === borradorActual) ? m[k] : aligera(m[k]); });
     if(lsSet(CLAVE_BORRADORES, JSON.stringify(m2))) return true;
-    Object.keys(m2).forEach(k=>{ m2[k] = aligera(m2[k]); });
-    return lsSet(CLAVE_BORRADORES, JSON.stringify(m2));
+
+    /* Si aún no entra, se sueltan los borradores viejos enteros, del más
+       antiguo al más nuevo. Antes de esto se les quitaban las fotos A TODOS,
+       incluido el que se está llenando: el recibo y las constancias
+       desaparecían sin avisar y había que volver a subirlos al recargar.
+       El que está en la mano no se toca nunca. */
+    const viejos = Object.keys(m2)
+      .filter(k => k !== borradorActual)
+      .sort((a,b)=>(m2[a].actualizado||0)-(m2[b].actualizado||0));
+    for(const k of viejos){
+      delete m2[k];
+      if(lsSet(CLAVE_BORRADORES, JSON.stringify(m2))) return true;
+    }
+    /* Ni así: se guarda el avance sin fotos para no perder lo escrito, y se
+       dice en voz alta, porque las fotos siguen solo en esta pantalla. */
+    const solo = {}; solo[borradorActual] = aligera(m2[borradorActual] || m[borradorActual]);
+    const ok = lsSet(CLAVE_BORRADORES, JSON.stringify(solo));
+    avisaSinEspacio();
+    return ok;
   }catch(e){ return false; }
+}
+
+/* Una sola vez por sesión: el aviso importa, pero repetirlo en cada tecla no */
+let yaAvisoEspacio = false;
+function avisaSinEspacio(){
+  if(yaAvisoEspacio) return;
+  yaAvisoEspacio = true;
+  try{
+    burbujaBot('⚠️ Este celular se quedó sin espacio para guardar las fotos.'+
+      '<span class="peque">Lo escrito sigue guardado, pero <b>las fotos solo están en esta pantalla</b>: '+
+      'no cierres ni recargues antes de enviar. Si tienes otros registros a medias, '+
+      'termínalos o bórralos desde «⇄».</span>');
+  }catch(e){}
 }
 function tituloBorrador(b){
   const d = (b && b.datos) || {};
@@ -1064,7 +1095,32 @@ function pintaProgreso(){
 }
 
 /* ================== DOCK ================== */
-function dockLimpiar(){ dockInner.innerHTML=''; }
+/* Mientras la siguiente burbuja se escribe, los botones de la pregunta
+   anterior siguen en pantalla: un segundo toque —el de la prisa, o el que el
+   dedo da solo— respondía DOS veces y el formulario saltaba un paso. Por eso
+   el dock se cierra con el primer toque y se abre solo cuando se pinta el
+   siguiente, que es lo que hace dockLimpiar(). */
+let dockUsado = false, relojDock = null;
+function dockLimpiar(){ sueltaDock(); dockInner.innerHTML=''; }
+function tomaDock(){
+  if(dockUsado) return false;
+  dockUsado = true;
+  dockInner.style.opacity = '.55';
+  dockInner.style.pointerEvents = 'none';
+  /* Si por algún camino no se vuelve a pintar el dock, se suelta solo: más
+     vale un toque repetido que quedarse mirando botones muertos. */
+  clearTimeout(relojDock);
+  relojDock = setTimeout(sueltaDock, 6000);
+  return true;
+}
+/* Algunos botones abren el selector de archivos y el dock tiene que seguir
+   vivo por si se cancela: esos no lo cierran. */
+function sueltaDock(){
+  clearTimeout(relojDock);
+  dockUsado = false;
+  dockInner.style.opacity = '';
+  dockInner.style.pointerEvents = '';
+}
 
 /* ---------- Historial: permite regresar un paso ---------- */
 let historial = [];
@@ -1155,7 +1211,7 @@ function dockTexto(paso, onDone){
         b.style.cssText='display:block;width:100%;text-align:left;padding:9px 12px;border:0;'+
           'background:transparent;font-size:14px;cursor:pointer;border-bottom:1px solid var(--borde,#f0f0f0)';
         b.innerHTML = '<b>'+escapa(it.t)+'</b>'+(it.sub?'<span class="peque" style="display:block;margin:2px 0 0">'+escapa(it.sub)+'</span>':'');
-        b.onclick = ()=>{ cajaSug.style.display='none'; it.fn(); };
+        b.onclick = ()=>{ if(!tomaDock()) return; cajaSug.style.display='none'; it.fn(); };
         cajaSug.appendChild(b);
       });
       cajaSug.style.display='block';
@@ -1170,6 +1226,9 @@ function dockTexto(paso, onDone){
   const enviar = ()=>{
     const val = inp.value;
     if(!val.trim()) return;
+    /* Un segundo envío mientras la siguiente pregunta se escribe mandaba la
+       misma respuesta dos veces y saltaba un paso. */
+    if(!tomaDock()) return;
     const r = paso.valida(val);
     if(!r.ok){
       burbujaUser(val.trim());
@@ -1219,7 +1278,11 @@ function dockChips(opciones, grid){
     const b = document.createElement('button');
     b.className='chip'+(o.clase?' '+o.clase:'');
     b.innerHTML = o.t;
-    b.addEventListener('click',o.fn);
+    b.addEventListener('click', ev=>{
+      if(!tomaDock()) return;              // ya se tocó: este toque no cuenta
+      if(o.noBloquea) sueltaDock();        // abre el selector de archivos
+      o.fn(ev);
+    });
     c.appendChild(b);
   });
   dockInner.appendChild(c);
@@ -1266,6 +1329,8 @@ function dockFotoConfirmar(dataUrl){
   const ok = document.createElement('button'); ok.className='chip primario'; ok.textContent='✅ Sí, usar esta foto';
   const no = document.createElement('button'); no.className='chip secund'; no.textContent='🔄 Elegir otra foto';
   ok.addEventListener('click',()=>{
+    /* Doble toque en «Sí, usar esta foto» subía el mismo archivo dos veces */
+    if(!tomaDock()) return;
     datos.constancias = datos.constancias || [];
     datos.constancias.push(dataUrl);
     datos.constanciaDataUrl = datos.constancias[0];
@@ -1309,7 +1374,8 @@ function preguntaOtraConstancia(){
   }
   burbujaBot(msg).then(()=>{
     dockChips([
-      {t:'➕ Agregar otra constancia', fn:()=>{ burbujaUser('➕ Agregar otra constancia'); fotoCtx='voucher'; fileInput.click(); }},
+      {t:'➕ Agregar otra constancia', noBloquea:true,
+       fn:()=>{ burbujaUser('➕ Agregar otra constancia'); fotoCtx='voucher'; fileInput.click(); }},
       {t:'✔️ Eso es todo, continuar', clase:'primario', fn:()=>{
         burbujaUser('✔️ Continuar');
         dockLimpiar();
@@ -1465,6 +1531,7 @@ function confirmarPdf(dataUrl, nombre, alCerrar, destino){
   const ok = document.createElement('button'); ok.className='chip primario'; ok.textContent='✅ Sí, usar este archivo';
   const no = document.createElement('button'); no.className='chip secund'; no.textContent='🔄 Elegir otro';
   ok.addEventListener('click',()=>{
+    if(!tomaDock()) return;
     burbujaUser('📄 '+nombre);
     dockLimpiar();
     if(destino==='constancia'){
@@ -2804,15 +2871,26 @@ function pagosParaEnvio(){
 }
 
 /* Resumen legible de los pagos capturados (uno por línea) */
+/* En el modo «solo la constancia» no se elige medio: el dato está en el
+   voucher. Sin nombrarlo salía la clave interna, SOLO_CONSTANCIA. */
+function etiquetaMedio(medio){
+  const m = rwMedio(medio);
+  if(m) return m.etiqueta;
+  if(medio === 'SOLO_CONSTANCIA') return 'SEGÚN CONSTANCIA';
+  return medio || '';
+}
 function resumenPagosRw(){
   const gs = datos.pagos||[];
   if(!gs.length) return '';
-  return gs.map(g=>{
-    const m = rwMedio(g.medio);
-    const banco = g.bancoDestino || g.bancoOrigen || g.operador || '';
-    const op = g.operacion ? ' · op. '+g.operacion : (g.dniPagador ? ' · DNI '+g.dniPagador : '');
-    return (m?m.etiqueta:g.medio)+(banco?' · '+banco:'')+' · '+g.fecha+op+' · '+fmtSoles(g.monto);
-  }).join('\n');
+  /* Se arma con las partes que existen: en ese modo no hay banco ni fecha, y
+     unirlas igual dejaba separadores sueltos («SOLO_CONSTANCIA · · S/ 550»). */
+  return gs.map(g=>[
+      etiquetaMedio(g.medio),
+      g.bancoDestino || g.bancoOrigen || g.operador || '',
+      g.fecha || '',
+      g.operacion ? 'op. '+g.operacion : (g.dniPagador ? 'DNI '+g.dniPagador : ''),
+      fmtSoles(g.monto||0)
+    ].filter(Boolean).join(' · ')).join('\n');
   /* Texto plano, un pago por línea. Antes se unía con '<br>' y el mismo texto
      termina en sitios que NO son HTML —el campo del panel, el PDF del contrato—
      donde el tag salía impreso tal cual. Quien necesite HTML convierte el salto
@@ -2960,11 +3038,7 @@ function pidePagoRw(n){
   function cierra(){
     datos.pagos = datos.pagos || [];
     datos.pagos.push(g);
-    /* En el modo «solo la constancia» no se elige medio, y el campo salía en
-       blanco en el panel y en el PDF. Se nombra por lo que es: el medio está
-       en el voucher que va adjunto. */
-    const etiq = (rwMedio(datos.pagos[0].medio)||{}).etiqueta ||
-                 (datos.pagos[0].medio==='SOLO_CONSTANCIA' ? 'SEGÚN CONSTANCIA' : '');
+    const etiq = etiquetaMedio(datos.pagos[0].medio);
     if(esVenta()) datos.ventaMedioPago = etiq; else datos.metodoPago = etiq;
     const total = datos.pagos.reduce((a,x)=>a+(parseFloat(x.monto)||0),0);
     const esperado = esVenta() ? (parseFloat(datos.inicial)||0) : 70;
@@ -3156,7 +3230,11 @@ function avanzar(){
   pasosHechos++;
   pintaProgreso();
   const sig = cola.shift();
-  if(sig){ guardaBorrador(sig); mostrarPaso(sig); }
+  if(sig){ guardaBorrador(sig); mostrarPaso(sig); return; }
+  /* Sin cola no se pintaba nada: el dock se quedaba con los botones de la
+     pregunta anterior y el formulario parecía trabado. El final del camino es
+     el resumen, así que se va ahí en vez de dejar a nadie colgado. */
+  if(datos.tipoRegistro) irResumen();
 }
 function irResumen(){
   /* Si la corrección salió de la pestaña en medio del formulario, el regreso es
@@ -3435,13 +3513,25 @@ function pintaEstado(){
             (x.fn?'<span class="hoja-lapiz">✏️</span>':'')+
           '</button>').join('')+
       '</div>'+
-      '<div class="hoja-pie"><button type="button" class="chip primario ancho" id="hojaSeguir">'+
-        '↩️ Seguir donde estaba</button></div>'+
+      /* Faltaba la salida hacia adelante: desde aquí solo se podía volver a
+         la pregunta en curso, así que para enviar había que recorrer el
+         camino otra vez. El resumen ya avisa de lo que falte. */
+      '<div class="hoja-pie">'+
+        '<button type="button" class="chip '+(faltan?'primario':'secund')+' ancho" id="hojaSeguir">'+
+          '↩️ Seguir donde estaba</button>'+
+        '<button type="button" class="chip '+(faltan?'secund':'primario')+' ancho" id="hojaFin">'+
+          '✅ Terminar y revisar</button>'+
+      '</div>'+
     '</div>';
   document.body.appendChild(hoja);
   const cerrar = ()=>cierraEstado();
   hoja.querySelector('#hojaCerrar').addEventListener('click', cerrar);
   hoja.querySelector('#hojaSeguir').addEventListener('click', cerrar);
+  hoja.querySelector('#hojaFin').addEventListener('click', ()=>{
+    cierraEstado();                 // suelta el punto de regreso: se va al final
+    dockLimpiar();
+    irResumen();
+  });
   hoja.addEventListener('click', e=>{ if(e.target===hoja) cerrar(); });
   hoja.querySelectorAll('.hoja-fila[data-i]').forEach(b=>{
     b.addEventListener('click', ()=>{
