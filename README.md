@@ -78,6 +78,15 @@ escriba sobre otra persona. Es lo que mantiene la base al día sin que nadie la
 llene a mano; el panel de asesores tiene el filtro «Sin RUC / Sin DNI» para ver
 cuánto falta.
 
+**Los documentos también se reusan.** Un recibo de servicios o un sustento de
+ingreso que ya subió en otra compra sigue en el bucket, así que se ofrece con
+su fecha y viaja con el registro nuevo **por su ruta, sin volver a subirlo**: el
+mismo archivo queda referenciado por los dos registros. Las **constancias de
+pago quedan fuera a propósito** —`opciones_cliente` ni las devuelve—: un
+voucher sustenta un solo pago y reusarlo sería declarar dos veces el mismo
+dinero. Del recibo se dice de cuándo es, y se marca si pasa de tres meses, que
+es el límite de Rena Ware; decidir es del asesor, no del sistema.
+
 Si el documento se escribe a mano en vez de elegirlo del desplegable, el
 formulario igual reconoce a quien ya está en la base (`buscar_cliente`,
 afiliaciones incluidas) y ofrece usar sus datos. Al aceptar **no se salta hasta

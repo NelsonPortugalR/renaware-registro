@@ -369,9 +369,13 @@ const datos = {
   reciboTipo:'', reciboContrato:'', reciboFotoDataUrl:'', reciboMes:'', reciboMesTexto:'',
   trabDepartamento:'', trabProvincia:'', trabDistrito:'', trabDireccion:'', trabajoMismaCasa:false,
   fuentes:[], conyuge:null, sumaConyuge:false, sinIngresoTitular:false, referencias:[], entregaEn:'',
+  entregaDireccion:'', entregaDepartamento:'', entregaProvincia:'', entregaDistrito:'',
   /* --- compartido --- */
   departamento:'', provincia:'', distrito:'', direccion:'',
-  metodoPago:'', constanciaDataUrl:''
+  metodoPago:'', constanciaDataUrl:'',
+  /* Documentos de compras anteriores que se vuelven a usar: ya están en el
+     bucket, así que viajan por su ruta y no se suben de nuevo. */
+  docsReusados:[], reciboReusado:null
 };
 
 const DATOS_VACIOS = JSON.parse(JSON.stringify(datos));
@@ -1319,7 +1323,12 @@ function preguntaOtraConstancia(){
 function dockUbigeo(target, onDone){
   marca(()=>dockUbigeo(target, onDone));
   target = target || 'casa';
-  const esTrab = target==='trabajo';
+  /* Cada destino escribe en sus propios campos; la entrega se agregó para la
+     excepción de entregar en una dirección que no es la casa ni el trabajo. */
+  const CAMPOS = {casa:    ['departamento','provincia','distrito'],
+                  trabajo: ['trabDepartamento','trabProvincia','trabDistrito'],
+                  entrega: ['entregaDepartamento','entregaProvincia','entregaDistrito']};
+  const campo = CAMPOS[target] || CAMPOS.casa;
   dockLimpiar();
   const w = document.createElement('div');
   w.innerHTML =
@@ -1351,9 +1360,7 @@ function dockUbigeo(target, onDone){
     });
     if(preselec) sDist.value = preselec;
   }
-  const preDep = esTrab ? datos.trabDepartamento : datos.departamento;
-  const preProv = esTrab ? datos.trabProvincia : datos.provincia;
-  const preDist = esTrab ? datos.trabDistrito : datos.distrito;
+  const preDep = datos[campo[0]], preProv = datos[campo[1]], preDist = datos[campo[2]];
   sDep.value = preDep || 'Arequipa';
   llenaProv();
   sProv.value = preProv && UBIGEO[sDep.value][preProv] ? preProv : Object.keys(UBIGEO[sDep.value])[0];
@@ -1366,15 +1373,9 @@ function dockUbigeo(target, onDone){
       burbujaBot('Falta elegir el <b>distrito</b> 🙏','error-msg');
       return;
     }
-    if(esTrab){
-      datos.trabDepartamento = sDep.value;
-      datos.trabProvincia = sProv.value;
-      datos.trabDistrito = sDist.value;
-    } else {
-      datos.departamento = sDep.value;
-      datos.provincia = sProv.value;
-      datos.distrito = sDist.value;
-    }
+    datos[campo[0]] = sDep.value;
+    datos[campo[1]] = sProv.value;
+    datos[campo[2]] = sDist.value;
     burbujaUser(sDist.value+', '+sProv.value+', '+sDep.value);
     dockLimpiar();
     if(onDone){ onDone(); return; }
@@ -1962,7 +1963,53 @@ function reciboLuego(){
     dockChips([{t:'➡️ Continuar', clase:'primario', fn:()=>{ burbujaUser('➡️ Continuar'); dockLimpiar(); reciboDone(); }}]);
   });
 }
-function flujoRecibo(){
+/* «Agua Setiembre 2026 (foto)» → tipo y mes por separado. Es el texto que el
+   formulario guardó en su momento; si no calza con ninguno de los servicios
+   conocidos, se usa tal cual y no se pierde nada. */
+const SERVICIOS = ['Luz','Agua','Gas','Internet','Cable','Contrato de alquiler'];
+function partesRecibo(txt){
+  const t = String(txt||'').replace(/\s*\((foto|archivo)\)\s*$/i,'').trim();
+  const s = SERVICIOS.find(x => normTxt(t).startsWith(normTxt(x)));
+  if(!s) return {tipo:t, mes:''};
+  return {tipo:s, mes: t.slice(s.length).replace(/^\s*N°.*$/,'').trim()};
+}
+
+/* Si ya subió un recibo en una compra anterior, se ofrece antes de pedírselo
+   de nuevo: el archivo sigue en el bucket. Se dice de cuándo es, porque Rena
+   Ware lo quiere con menos de tres meses y eso lo decide él, no el sistema. */
+function ofreceRecibosPrevios(){
+  const prev = docsPrevios('recibo');
+  if(!prev.length) return false;
+  const ops = prev.slice(0,4).map(d=>{
+    const p = partesRecibo(d.recibo);
+    const viejo = Number(d.dias) > 92;
+    return {t:'🧾 '+escapa(p.tipo || 'Recibo')+(p.mes?' · '+escapa(p.mes):'')+
+             '<span class="peque">'+(viejo?'⚠️ subido el '+escapa(d.subido)+', más de 3 meses'
+                                          :'subido el '+escapa(d.subido))+
+             (d.direccion?' · '+escapa(d.direccion.slice(0,38)):'')+'</span>',
+            clase: viejo ? 'secund' : '',
+            fn:()=>{
+              datos.reciboTipo = p.tipo || 'Recibo';
+              datos.reciboMesTexto = p.mes; datos.reciboMes = '';
+              datos.reciboContrato = ''; datos.reciboFotoDataUrl = '';
+              datos.reciboReusado = d; datos.reciboPendiente = false;
+              reusaDoc(d);
+              burbujaUser('🧾 '+(p.tipo||'Recibo')+(p.mes?' · '+p.mes:''));
+              dockLimpiar();
+              burbujaBot('Listo ✅ Va el <b>recibo que ya tenemos</b>, el mismo archivo de su compra anterior.')
+                .then(()=>reciboDone());
+            }};
+  });
+  ops.push({t:'📎 Subir otro recibo', clase:'primario ancho',
+            fn:()=>{ burbujaUser('📎 Subir otro recibo'); dockLimpiar(); flujoRecibo(true); }});
+  burbujaBot('De su compra anterior ya tengo <b>recibo de servicios</b> 🧾 ¿Lo usamos?'+
+    '<span class="peque">Rena Ware lo pide con menos de tres meses.</span>')
+    .then(()=>dockChips(ops, true));
+  return true;
+}
+
+function flujoRecibo(saltarPrevios){
+  if(!saltarPrevios && ofreceRecibosPrevios()) return;
   burbujaBot('Para el crédito necesitamos un <b>recibo de servicios</b> de la vivienda 🧾 ¿Cuál dará?<span class="peque">No es necesario que esté a nombre del cliente, pero tener en cuenta que Rena Ware podría solicitar un recibo a su nombre.</span>').then(()=>{
     const elegir = (tipo)=>{ datos.reciboTipo=tipo; burbujaUser(tipo); pedirReciboDato(); };
     dockChips([
@@ -1975,7 +2022,7 @@ function flujoRecibo(){
           {t:'📄 Contrato de alquiler', fn:()=>elegir('Contrato de alquiler')},
           {t:'🌐 Internet', fn:()=>elegir('Internet')},
           {t:'📺 Cable', fn:()=>elegir('Cable')},
-          {t:'↩️ Volver', clase:'secund', fn:()=>{ burbujaUser('Volver'); flujoRecibo(); }},
+          {t:'↩️ Volver', clase:'secund', fn:()=>{ burbujaUser('Volver'); flujoRecibo(true); }},
           {t:'⏭️ Completar después', clase:'secund', fn:()=>reciboLuego()}
         ]);
       }},
@@ -2042,6 +2089,11 @@ function pideMesRecibo(luego){
 }
 function pedirReciboDato(){
   datos.reciboContrato=''; datos.reciboFotoDataUrl='';
+  /* Si venía uno reusado y ahora sube otro, el viejo se suelta */
+  if(datos.reciboReusado){
+    datos.docsReusados = (datos.docsReusados||[]).filter(x=>x.ruta !== datos.reciboReusado.ruta);
+    datos.reciboReusado = null;
+  }
   if(datos.reciboTipo==='Contrato de alquiler'){
     datos.reciboMes=''; datos.reciboMesTexto='';
     burbujaBot('Sube la <b>foto del contrato de alquiler</b> 📷<span class="peque">Debe verse completo y legible.</span>').then(()=>{ fotoCtx='recibo'; dockFoto('📎 Subir contrato (foto o PDF)'); });
@@ -2108,6 +2160,17 @@ function tiposSustento(fuente){
   if(fuente==='Alquila propiedades') return ['Recibo de luz de la propiedad','Constancia de tributo SUNAT (a su nombre)','Contrato de alquiler','Estado de cuenta (banco o tarjeta)','Otro documento'];
   return ['Constancia de abono de la pensión','Estado de cuenta (banco o tarjeta)','Otro documento'];
 }
+/* El nombre del archivo lleva dentro qué documento es: «sustento-1-1-boleta-
+   de-pago.jpg». Los más viejos guardaron el nombre original del celular, y
+   esos se muestran tal cual. */
+function etiquetaSustento(nombre){
+  const m = String(nombre||'').match(/^sustento-\d+-\d+-(.+)\.[a-z0-9]+$/i);
+  const t = m ? m[1] : String(nombre||'Documento');
+  if(/\s/.test(t)) return t;
+  const s = t.replace(/-/g,' ').trim();
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+
 function renderSustentosDock(){
   dockLimpiar();
   const w = document.createElement('div');
@@ -2127,6 +2190,24 @@ function renderSustentosDock(){
     b.addEventListener('click',()=>{ sustentoTipoActual=t; burbujaUser('📎 '+t); sustentoInput.click(); });
     c.appendChild(b);
   });
+  /* Los sustentos que ya subió en otra compra sirven igual, y están a un
+     toque en vez de a una búsqueda en la galería. */
+  docsPrevios('sustento')
+    .filter(d=>!(sustentoCtx.sustentos||[]).some(s=>s.ruta===d.ruta))
+    .slice(0,4).forEach(d=>{
+      const b = document.createElement('button'); b.className='chip secund';
+      b.innerHTML = '♻️ '+escapa(etiquetaSustento(d.nombre))+
+                    '<span class="peque">ya subido el '+escapa(d.subido)+'</span>';
+      b.addEventListener('click',()=>{
+        sustentoCtx.sustentos.push({name:etiquetaSustento(d.nombre),
+                                    tipo:'De una compra anterior', ruta:d.ruta});
+        reusaDoc(d);
+        burbujaUser('♻️ '+etiquetaSustento(d.nombre));
+        renderSustentosDock();
+      });
+      c.appendChild(b);
+    });
+
   if(sustentoCtx.sustentos.length){
     const b2 = document.createElement('button'); b2.className='chip primario'; b2.textContent='✔️ Listo con los sustentos';
     b2.addEventListener('click',()=>{
@@ -2921,11 +3002,68 @@ function flujoEntregaCred(){
     msg += '<span class="peque">La entrega siempre debe ser en zona de crédito; el trabajo está fuera de zona, así que solo puede ser en la casa.</span>';
   }
   burbujaBot(msg).then(()=>{
-    const set = (v)=>{ datos.entregaEn=v; burbujaUser(v==='Casa'?'🏠 En su casa':'🏢 En su trabajo'); dockLimpiar(); terminarBloque(); };
+    const set = (v)=>{
+      datos.entregaEn=v;
+      datos.entregaDireccion=''; datos.entregaDepartamento=''; datos.entregaProvincia=''; datos.entregaDistrito='';
+      burbujaUser(v==='Casa'?'🏠 En su casa':'🏢 En su trabajo'); dockLimpiar(); terminarBloque();
+    };
     const ops = [{t:'🏠 En su casa', fn:()=>set('Casa')}];
     if(trabOk) ops.push({t:'🏢 En su trabajo', fn:()=>set('Trabajo')});
+    /* No es la regla —la entrega va a la casa o al trabajo—, pero de vez en
+       cuando hace falta otra: la casa de un familiar, un local. Se pide
+       completa, con su distrito, porque la zona de crédito se decide ahí. */
+    ops.push({t:'📍 Otra dirección', clase:'secund', fn:()=>{
+      burbujaUser('📍 Otra dirección'); dockLimpiar(); pideEntregaOtra();
+    }});
     dockChips(ops);
   });
+}
+
+function pideEntregaOtra(){
+  burbujaBot('¿En qué <b>distrito</b> se hará la entrega?').then(()=>{
+    dockUbigeo('entrega', ()=>{
+      burbujaBot('Ahora la <b>dirección exacta</b> de la entrega.'+
+        '<span class="peque">Calle o avenida, número, y una referencia si ayuda a ubicarla.</span>').then(()=>{
+        dockTexto({tipo:'texto', inputmode:'text', placeholder:'Calle, número y referencia',
+          valida(v){
+            const t = String(v||'').trim();
+            if(t.length < 6) return {ok:false, msg:'Escribe la dirección completa, por favor 🙏'};
+            return {ok:true, v:t};
+          },
+          guarda(v){ datos.entregaDireccion = v; datos.entregaEn = 'Otra'; }
+        }, ()=>{
+          const enZona = ZONAS_CREDITO.has(datos.entregaDepartamento+'|'+
+                           datos.entregaProvincia+'|'+datos.entregaDistrito);
+          if(enZona){ terminarBloque(); return; }
+          /* Fuera de zona no se bloquea —él pidió la excepción—, pero queda
+             dicho y escrito, que es lo que Rena Ware va a revisar. */
+          burbujaBot('Ojo 👀 <b>'+escapa(datos.entregaDistrito)+'</b> no está en zona de crédito.'+
+            '<span class="peque">Rena Ware pide que la entrega sea en zona autorizada. '+
+            'Puedes continuar, pero queda anotado en el registro.</span>').then(()=>{
+            dockChips([
+              {t:'➡️ Continuar igual', clase:'primario', fn:()=>{
+                burbujaUser('➡️ Continuar igual'); dockLimpiar(); terminarBloque(); }},
+              {t:'↩️ Elegir otro lugar', clase:'secund', fn:()=>{
+                burbujaUser('↩️ Elegir otro lugar');
+                datos.entregaEn=''; datos.entregaDireccion='';
+                dockLimpiar(); flujoEntregaCred(); }}
+            ]);
+          });
+        });
+      });
+    });
+  });
+}
+
+/* Texto único del lugar de entrega, para el resumen, el panel y la ficha */
+function textoEntrega(){
+  if(datos.entregaEn === 'Casa') return '🏠 En su casa';
+  if(datos.entregaEn === 'Trabajo') return '🏢 En su trabajo';
+  if(datos.entregaEn === 'Otra')
+    return '📍 '+datos.entregaDireccion+
+           ' — '+[datos.entregaDistrito, datos.entregaProvincia, datos.entregaDepartamento]
+                   .filter(Boolean).join(', ');
+  return '';
 }
 
 /* ================== FLUJO ================== */
@@ -3129,7 +3267,8 @@ function vRecibo(){
   if(!datos.reciboTipo) return '';
   const mes = datos.reciboMesTexto ? ' · '+datos.reciboMesTexto : '';
   return datos.reciboTipo + mes + (datos.reciboContrato ? ' · N° '+datos.reciboContrato
-         : (datos.reciboFotoDataUrl ? ' · archivo ✔' : ''));
+         : (datos.reciboFotoDataUrl ? ' · archivo ✔'
+         : (datos.reciboReusado ? ' · archivo ✔ (el de su compra anterior)' : '')));
 }
 function vLaborales(){
   const f = (datos.fuentes||[]).filter(x=>x.titular!=='Cónyuge');
@@ -3233,7 +3372,7 @@ function catalogoDatos(){
     }});
     L.push({t:'Referencias', v:vReferencias(), icono:'👥',
             fn:()=>{ editando=true; flujoReferencias(true); }});
-    L.push({t:'Lugar de entrega', v:vSi(datos.entregaEn),
+    L.push({t:'Lugar de entrega', v:textoEntrega(),
             fn:()=>{ editando=true; flujoEntregaCred(); }});
   }
   if(datos.notaPedido !== undefined)
@@ -3563,7 +3702,7 @@ async function irResumenCredito(){
   datos.referencias.forEach((r,i)=>{
     html += fila('Referencia '+(i+1), r.nombre+' · '+r.celular+(r.direccion?' · '+r.direccion:' · (dirección pendiente)'));
   });
-  html += fila('Entrega', datos.entregaEn==='Casa' ? '🏠 En su casa' : '🏢 En su trabajo');
+  html += fila('Entrega', textoEntrega());
   html += '</div>';
   card.innerHTML = html;
   chat.appendChild(card); scrollAbajo();
@@ -3610,6 +3749,12 @@ async function enviarCredito(){
     referencias: datos.referencias,
     pagos: pagosParaEnvio(),
     entrega_en: datos.entregaEn,
+    /* La excepción va con sus partes separadas, que es como las necesita el
+       contrato: calle, distrito, provincia y departamento. */
+    entrega_direccion:    datos.entregaEn==='Otra' ? datos.entregaDireccion : '',
+    entrega_distrito:     datos.entregaEn==='Otra' ? datos.entregaDistrito : '',
+    entrega_provincia:    datos.entregaEn==='Otra' ? datos.entregaProvincia : '',
+    entrega_departamento: datos.entregaEn==='Otra' ? datos.entregaDepartamento : '',
     zona_credito: 'Sí'
   };
   const envio = await rwEnviar(registro, archivosDeRegistro());
@@ -3897,6 +4042,23 @@ function sumaFichaAsesor(f){
                     razon_social: ''});
 }
 
+/* ---------- Documentos que ya subió antes ----------
+   Un recibo de luz o una boleta de pago siguen sirviendo para la siguiente
+   compra: ya están en el bucket, así que se reusan por su ruta y nadie vuelve
+   a buscarlos en el celular. Las constancias de pago no entran aquí —la base
+   ya las excluye—: un voucher sustenta un solo pago. */
+function docsPrevios(tipo){
+  const l = (datos.cliOpc && datos.cliOpc.documentos) || [];
+  return l.filter(d => d && d.ruta && (!tipo || d.tipo === tipo));
+}
+
+/* Lo marca para que viaje con el registro nuevo sin volver a subirlo */
+function reusaDoc(d){
+  datos.docsReusados = datos.docsReusados || [];
+  if(!datos.docsReusados.some(x=>x.ruta === d.ruta))
+    datos.docsReusados.push({nombre:d.nombre, tipo:d.tipo, ruta:d.ruta});
+}
+
 /* ---------- Opciones conocidas, campo por campo ----------
    0 conocidas → el paso corre normal.
    1 conocida  → se ofrece esa y la alternativa de escribir otra.
@@ -4163,6 +4325,13 @@ async function rwEnviar(reg, archivos){
         if(a.original && a.original !== a.nombre) console.info('adjunto', a.nombre, '← original:', a.original);
       }catch(e){ console.warn('No se pudo subir', a.nombre, e); }
     }
+    /* Los que vienen de una compra anterior ya están en el bucket: viajan por
+       su ruta, sin volver a subirse. El archivo queda compartido por los dos
+       registros, que es justamente la idea. */
+    (datos.docsReusados||[]).forEach(d=>{
+      if(d && d.ruta && !docs.some(x=>x.ruta===d.ruta))
+        docs.push({nombre:d.nombre, tipo:d.tipo, ruta:d.ruta});
+    });
     /* 2. Armar el paquete completo */
     const fila = filaRegistro();
     const personas = [];
@@ -4268,7 +4437,7 @@ function faltantes(){
     burbujaBot(PASOS.foto.pregunta()).then(()=>dockFoto('📎 Subir constancia (foto o PDF)'));
   }});
   if(esCredito()){
-    if(!datos.reciboTipo || (!datos.reciboContrato && !datos.reciboFotoDataUrl)) f.push({txt:'Recibo de servicios de la vivienda', fn:()=>{ editando=true; flujoRecibo(); }});
+    if(!datos.reciboTipo || (!datos.reciboContrato && !datos.reciboFotoDataUrl && !datos.reciboReusado)) f.push({txt:'Recibo de servicios de la vivienda', fn:()=>{ editando=true; flujoRecibo(); }});
     if(!datos.fuentes.length && !datos.sinIngresoTitular) f.push({txt:'Fuente de ingreso', fn:()=>{ editando=true; flujoLaborales('Titular', terminarBloque); }});
     if(datos.referencias.filter(r=>r.nombre && r.celular).length < 2) f.push({txt:'2 referencias personales', fn:()=>{ editando=true; flujoReferencias(); }});
     if(!datos.entregaEn) f.push({txt:'Lugar de entrega', fn:()=>{ editando=true; flujoEntregaCred(); }});
@@ -4351,7 +4520,7 @@ function generaImagenPedido(){
     const fs = datos.fuentes.map(x=>x.fuente+' — '+x.dedicacion+(x.empresa && x.empresa!=='Sin nombre' ? ' ('+x.empresa+')' : '')).join('  |  ');
     filas.push(['Fuente de ingreso', fs]);
   }
-  if(datos.entregaEn) filas.push(['Entrega del pedido', datos.entregaEn==='Casa' ? 'En su casa' : 'En su trabajo']);
+  if(datos.entregaEn) filas.push(['Entrega del pedido', textoEntrega().replace(/^[^ ]+ /,'')]);
   if(datos.referencias && datos.referencias.length){
     filas.push(['Referencias', datos.referencias.map(r=>r.nombre).join('  |  ')]);
   }
@@ -4483,7 +4652,7 @@ function restauraBorrador(b){
   sinAtras = false;
   // Si por espacio se perdieron fotos ya tomadas, se vuelven a pedir
   if(datos.ventaMedioPago && !(datos.constancias||[]).length && cola.indexOf('foto')===-1){ cola.unshift('foto'); totalPasos++; }
-  if(datos.reciboTipo && datos.reciboTipo!=='' && !datos.reciboContrato && !datos.reciboFotoDataUrl && cola.indexOf('reciboServicios')===-1 && cola.indexOf('foto')===-1){ cola.unshift('reciboServicios'); totalPasos++; }
+  if(datos.reciboTipo && datos.reciboTipo!=='' && !datos.reciboContrato && !datos.reciboFotoDataUrl && !datos.reciboReusado && cola.indexOf('reciboServicios')===-1 && cola.indexOf('foto')===-1){ cola.unshift('reciboServicios'); totalPasos++; }
   pintaBtnRegistros();
   avanzar();
 }

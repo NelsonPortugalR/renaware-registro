@@ -1018,11 +1018,19 @@ function datosContrato(r){
   pon('distrito', r.distrito);
   pon('provincia', r.provincia || d.provincia || ''); pon('departamento', r.departamento || d.departamento || '');
 
+  /* La entrega va a la casa o al trabajo; «Otra» es la excepción que el
+     formulario permite y trae su propia dirección. Sin esto el contrato
+     imprimía la casa, que no es donde se entrega. */
   const enTrabajo = d.entrega_en === 'Trabajo' && d.trab_direccion;
-  pon('entrega_direccion', enTrabajo ? d.trab_direccion : r.direccion);
-  pon('entrega_distrito',  enTrabajo ? d.trab_distrito : r.distrito);
-  pon('entrega_provincia', enTrabajo ? d.trab_provincia : (r.provincia||d.provincia));
-  pon('entrega_departamento', enTrabajo ? d.trab_departamento : (r.departamento||d.departamento));
+  const enOtra    = d.entrega_en === 'Otra' && d.entrega_direccion;
+  pon('entrega_direccion', enOtra ? d.entrega_direccion
+                         : enTrabajo ? d.trab_direccion : r.direccion);
+  pon('entrega_distrito',  enOtra ? d.entrega_distrito
+                         : enTrabajo ? d.trab_distrito : r.distrito);
+  pon('entrega_provincia', enOtra ? d.entrega_provincia
+                         : enTrabajo ? d.trab_provincia : (r.provincia||d.provincia));
+  pon('entrega_departamento', enOtra ? d.entrega_departamento
+                         : enTrabajo ? d.trab_departamento : (r.departamento||d.departamento));
   pon('entrega_celular', r.celular);
 
   const mercaderia = (r.items || []).slice(0,4);
@@ -1523,6 +1531,10 @@ if(r.tipo !== 'afiliacion')
     campo('Medio de pago', d.medio_pago, 'id="g-mediopago"')+
     campo('Recibo de servicios', d.recibo, 'id="g-recibo"')+
     campo('Lugar de entrega', d.entrega_en, 'id="g-entrega"')+
+    (d.entrega_en === 'Otra'
+      ? campo('Dirección de entrega', [d.entrega_direccion, d.entrega_distrito,
+              d.entrega_provincia].filter(Boolean).join(', '), 'readonly')
+      : '')+
     campo('N° de pedido (Rena Ware)', r.numeroPedido, 'id="g-numped" class="mono"')+
     campo('Fecha en el sistema de Rena Ware', r.fechaSistema, 'type="date" id="g-fsistema"')+
     campo('Fecha del reescrito', r.fechaReescrito, 'type="date" id="g-freescrito"')+
