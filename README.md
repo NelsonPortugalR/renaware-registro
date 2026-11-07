@@ -112,6 +112,21 @@ para todo registro), y en la base de asesores con su ficha llena
 duplicados mira nombre, código y DNI, porque «Helen Coska» y «HELEN KOSKA» son
 la misma señora.
 
+## Pasar una venta de crédito a contado
+
+Cuando Créditos observa un pedido y la venta se cierra al contado, el cambio se
+hace desde la ficha, en **Modalidad**. Antes ese campo era solo texto
+(«Autocompra o venta a terceros»), así que los montos se dejaban en cero a mano
+pero `registros.tipo` seguía en `credito` y el contrato seguía marcando la
+casilla CRÉDITO: el PDF lee el tipo real, no el texto.
+
+Ahora el selector cambia el tipo de verdad, con una confirmación antes. Al pasar
+a contado deja en cero cuotas, cuota mensual, intereses y gastos, borra la
+evaluación (`resultado`), y el contrato o reescrito marca **CONTADO** con el
+precio en su casilla y CRÉDITO vacío. Al volver a crédito reaparece el campo de
+cuotas y la evaluación vuelve a `pendiente`. En los dos sentidos queda anotado
+en la bitácora del registro, porque un reescrito tiene que poder explicarse.
+
 ## El panel desde el celular
 
 El panel se usa tanto desde el teléfono como desde la laptop, así que las dos

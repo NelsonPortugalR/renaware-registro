@@ -1525,7 +1525,12 @@ function abrir(id){
 if(r.tipo !== 'afiliacion')
   h += '<div class="bloque"><h3>La venta</h3><div class="campos">'+
     campo('Asesor que vende', r.asesor, 'id="g-asesor"', {ancho:1})+
-    campo('Tipo de venta', d.tipo_venta || (r.tipo==='afiliacion'?'Afiliación':''), 'id="g-tipoventa"')+
+    /* Esto es lo que manda: la columna «tipo» del registro. El campo de
+       abajo solo describe la venta («Autocompra», «Venta a terceros») y
+       escribir «contado» ahí no cambiaba nada: el contrato seguía marcando
+       CRÉDITO porque lee el tipo, no el texto. */
+    sel('Modalidad', r.tipo, [['contado','Contado'],['credito','Crédito']], 'id="g-modalidad"')+
+    campo('Autocompra o venta a terceros', d.tipo_venta || '', 'id="g-tipoventa"')+
     campo('Producto o promoción', r.producto, 'id="g-producto"', {ancho:1})+
     (d.adicionales ? campo('Adicionales', d.adicionales, 'id="g-adicionales"', {ancho:1}) : '')+
     sel('Documento', r.tipoDoc, [['DNI','DNI'],['CE','Carné de extranjería']], 'id="g-tipodoc"')+
@@ -2009,6 +2014,40 @@ function guardarDetalle(){
     if($('#p-cuota')) r.pedido.cuotaMensual = num('#p-cuota');
     if($('#p-intereses')) r.pedido.intereses = num('#p-intereses');
     if($('#p-gastos')) r.pedido.gastos = num('#p-gastos');
+
+    /* ---- Cambio de modalidad ----
+       Créditos observa un pedido, se vuelve a hacer al contado y el reescrito
+       sale marcando CRÉDITO: el contrato lee r.tipo, y hasta ahora no había
+       manera de cambiarlo. Al pasar a contado se apagan los números del
+       crédito —cuotas, cuota mensual, intereses y cargos— y la evaluación
+       crediticia deja de aplicar; el saldo lo calcula el contrato como
+       precio menos inicial, que es el pago contra entrega. */
+    const modalidadNueva = $('#g-modalidad') ? $('#g-modalidad').value : r.tipo;
+    r.cambioModalidad = (modalidadNueva !== r.tipo) ? r.tipo : null;
+    if(r.cambioModalidad){
+      const aContado = modalidadNueva === 'contado';
+      const saldo = (Number(r.pedido.precio)||0) - (Number(r.inicial)||0);
+      const ok = confirm(aContado
+        ? 'Pasar esta venta a CONTADO.\n\n' +
+          '· Cuotas, cuota mensual, intereses y cargos quedan en 0\n' +
+          '· La evaluación de créditos deja de aplicar\n' +
+          '· El contrato marcará CONTADO y el saldo irá como pago contra entrega' +
+          (saldo > 0.009 ? ' (S/ '+saldo.toFixed(2)+')' : ' (ya está cancelado)') +
+          '\n\n¿Continuar?'
+        : 'Pasar esta venta a CRÉDITO.\n\n' +
+          'Tendrás que poner el número de cuotas para que se calculen la cuota, ' +
+          'los intereses y los cargos.\n\n¿Continuar?');
+      if(!ok){ r.cambioModalidad = null; }
+      else {
+        r.tipo = modalidadNueva;
+        if(aContado){
+          r.cuotas = null; r.resultado = null;
+          r.pedido.cuotaMensual = 0; r.pedido.intereses = 0; r.pedido.gastos = 0;
+        } else {
+          r.resultado = r.resultado || 'pendiente';
+        }
+      }
+    }
     r.credito = r.credito||{};
     const leerC = rol => ({
       puntaje: num('#c-'+rol+'-puntaje'),
@@ -2023,6 +2062,7 @@ function guardarDetalle(){
     titular:r.titular, dni:r.dni, celular:r.celular, correo:r.correo, distrito:r.distrito,
     asesor:r.asesor, direccion:r.direccion, producto:r.producto, inicial:r.inicial,
     cuotas:r.cuotas||null, notas:r.notas,
+    tipo:r.tipo, resultado:r.tipo==='credito' ? (r.resultado||'pendiente') : null,
     provincia:r.provincia||null, departamento:r.departamento||null,
     comprobante:r.comprobante||null, ruc:r.ruc||null, numero_pedido:r.numeroPedido||null,
     tipo_documento:r.tipoDoc||'DNI', razon_social:r.razonSocial||null,
@@ -2113,7 +2153,13 @@ function guardarDetalle(){
     if(per.length) tareas.push(sbUpsert('credito_persona', per, 'registro_id,rol'));
   }
   Promise.all(tareas).then(()=>{
-    if(JSON.stringify(r)!==antes) r.bitacora.push({f:Date.now(), t:'Datos actualizados desde el panel'});
+    if(r.cambioModalidad){
+      r.bitacora.push({f:Date.now(),
+        t:'Modalidad cambiada de '+(TIPOS[r.cambioModalidad]||r.cambioModalidad)+
+          ' a '+(TIPOS[r.tipo]||r.tipo)+' desde el panel'});
+      r.cambioModalidad = null;
+    }
+    else if(JSON.stringify(r)!==antes) r.bitacora.push({f:Date.now(), t:'Datos actualizados desde el panel'});
     pintaBanda(); pintaTabla();
     $('#dGuardado').classList.add('on');
     setTimeout(()=>$('#dGuardado').classList.remove('on'), 1800);
