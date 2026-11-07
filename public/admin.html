@@ -965,7 +965,13 @@ function _laboral(f, d, r){
   if(fu==='Pensión de jubilación'){
     let e = f.institucion ? 'Jubilado de '+f.institucion : 'Jubilado';
     if(emp) e += ' · pensión '+emp;
-    return [e, '', (f.direccionInst || dt), cargoCap || ded || 'Jubilado', t];
+    /* La dirección va la misma que se exporta al portal: la del trabajo, o la
+       de la casa si no hay. Antes mandaba la de la institución (la UGEL, por
+       ejemplo), así que el contrato y el portal decían cosas distintas de la
+       misma venta. La institución sigue nombrada en el empleador, y si se
+       quiere su dirección en los dos sitios se escribe en «dirección de
+       trabajo», que es la que alimenta a ambos. */
+    return [e, '', dt, cargoCap || ded || 'Jubilado', t];
   }
   return [emp||ded, ruc, dt, ded, t];
 }
@@ -1343,7 +1349,10 @@ function abrir(id){
   const r = DATOS.find(x=>x.id===id); if(!r) return;
   abierto = id;
   $('#dContrato').style.display = (r.tipo === 'afiliacion') ? 'none' : '';
-  $('#dReescrito').style.display = (r.tipo === 'afiliacion' || !r.numeroPedido) ? 'none' : '';
+  /* El botón se escondía cuando faltaba el número de pedido, así que no había
+     manera de saber por qué no estaba. Ahora se ve siempre en las ventas y es
+     él quien pide el número. */
+  $('#dReescrito').style.display = (r.tipo === 'afiliacion') ? 'none' : '';
   $('#dFicha').style.display = (r.tipo === 'afiliacion') ? '' : 'none';
 
   /* Productos editables */
@@ -2031,7 +2040,20 @@ function guardarDetalle(){
   if($('#itemsCaja') && ITEMS_reg === r){
     r.pedido = r.pedido || {};
     r.pedido.precio = totalItems(r);
-    r.producto = ITEMS_ED.map(x=>x.nombre).join(' + ');
+    /* La cabecera se rehace desde los productos: el nombre CON su código
+       delante, como lo arma el formulario, y el código de promoción con los
+       códigos de lo que quedó. Antes solo se rehacía el nombre —y sin código—
+       así que al cambiar un especial la cabecera seguía anunciando el
+       anterior, y el contrato salía con el código viejo. */
+    const conCod = x => {
+      const c = String(x.codigo||'').trim(), n = String(x.nombre||'').trim();
+      return (!c || n.startsWith(c)) ? n : (c+' '+n);
+    };
+    r.producto = ITEMS_ED.map(conCod).join(' + ');
+    r.pedido.codigo = ITEMS_ED.map(x=>String(x.codigo||'').trim()).filter(Boolean).join(' + ');
+    /* Y los campos de la cabecera en pantalla, para que no se vea lo viejo */
+    if($('#g-producto')) $('#g-producto').value = r.producto;
+    if($('#p-codigo'))   $('#p-codigo').value   = r.pedido.codigo;
     /* El registro en memoria también se queda con los productos nuevos: si no,
        al repintar la ficha volvían a salir los viejos. */
     r.itemsRaw = ITEMS_ED.map((x,n)=>({orden:n+1, lista:x.lista, codigo:x.codigo, nombre:x.nombre,
@@ -2258,8 +2280,22 @@ $('#dReescrito').addEventListener('click', async ()=>{
     if($('#g-freescrito')) $('#g-freescrito').value = r.fechaReescrito;
   }
   if(!r.numeroPedido){
-    alert('El reescrito lleva el número de pedido, y este registro todavía no lo tiene.\n\nMárcalo como "Visible en el sistema" para registrarlo.');
-    return;
+    const n = prompt('El reescrito lleva el número de pedido de Rena Ware, y este registro todavía no lo tiene.\n\nEscríbelo para continuar:', '');
+    if(n === null) return;
+    const limpio = String(n).replace(/\D/g,'');
+    if(!limpio){ alert('El número de pedido son solo dígitos. Revísalo.'); return; }
+    r.numeroPedido = limpio;
+    try{ await sbPatch('registros','id=eq.'+r.id,{numero_pedido:limpio}); }
+    catch(e){ alert('No se pudo guardar el número: '+String(e.message||e)); return; }
+    if($('#g-numped')) $('#g-numped').value = limpio;
+    if(!await aseguraCodigoAsesor(r)) return;
+    const hoyL = new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const f = prompt('¿Con qué fecha se envía el reescrito?\n\nEsa pasa a ser la fecha que cuenta para el período y el puntaje.', r.fechaReescrito || hoyL);
+    if(f === null) return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(f).trim())){ alert('Escribe la fecha como 2026-08-23.'); return; }
+    r.fechaReescrito = String(f).trim();
+    try{ await sbPatch('registros','id=eq.'+r.id,{fecha_reescrito:r.fechaReescrito}); }catch(e){}
+    if($('#g-freescrito')) $('#g-freescrito').value = r.fechaReescrito;
   }
   const b = $('#dReescrito'), antes = b.textContent;
   b.disabled = true; b.textContent = 'Generando…';

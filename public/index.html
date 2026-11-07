@@ -694,11 +694,11 @@ const PASOS = {
       datos.esPropio = (v==='mio');
       burbujaUser(v==='mio' ? 'Es mi afiliado' : 'Es de otro asesor');
       if(datos.esPropio){
-        cola = ['nombrePropio','nombreAfiliado','afiDni','afiCelular','afiCorreo','ubicacion','direccion','pago','foto','resumen'];
-        totalPasos = 11;
-      }else{
-        cola = ['asesorDueno','nombreAfiliado','afiDni','afiCelular','afiCorreo','ubicacion','direccion','pago','foto','resumen'];
+        cola = ['nombrePropio','nombreAfiliado','tipoDocumento','afiDni','afiCelular','afiCorreo','ubicacion','direccion','pago','foto','resumen'];
         totalPasos = 12;
+      }else{
+        cola = ['asesorDueno','nombreAfiliado','tipoDocumento','afiDni','afiCelular','afiCorreo','ubicacion','direccion','pago','foto','resumen'];
+        totalPasos = 13;
       }
       avanzar();
     }
@@ -719,9 +719,21 @@ const PASOS = {
     guarda(v){ datos.nombreAfiliado=v; }
   },
   afiDni:{
-    tipo:'texto', inputmode:'numeric', placeholder:'8 dígitos',
-    pregunta:()=>'¿Cuál es el <b>número de DNI</b> de '+nObj()+'? Son 8 dígitos.',
-    valida:validaDni,
+    /* La venta ya aceptaba carné de extranjería y la afiliación no: la misma
+       persona no podía afiliarse con el documento con el que sí compra. */
+    tipo:'texto', inputmode:'numeric',
+    placeholder:()=> datos.tipoDoc==='CE' ? 'Número del carné' : '8 dígitos',
+    pregunta:()=> datos.tipoDoc==='CE'
+      ? '¿Cuál es el <b>número de carné de extranjería</b> de '+nObj()+'?'
+      : '¿Cuál es el <b>número de DNI</b> de '+nObj()+'? Son 8 dígitos.',
+    valida(v){
+      if(datos.tipoDoc==='CE'){
+        const l = String(v).replace(/[^0-9A-Za-z]/g,'');
+        if(l.length<8 || l.length>12) return {ok:false, msg:'El carné de extranjería tiene entre 8 y 12 caracteres. Revísalo, por favor 🙏'};
+        return {ok:true, v:l};
+      }
+      return validaDni(v);
+    },
     guarda(v){ datos.dni=v; }
   },
   afiCelular:{
@@ -2639,9 +2651,10 @@ function flujoLaborales(persona, alFinal, fuentePreset){
   /* --- 7 bis. Cargo y sueldo (van al portal de Rena Ware) --- */
   const pideCargoSueldo = (luego)=>{
     const esAlq = f.fuente==='Alquila propiedades';
-    if(esAlq){ luego(); return; }
     const pideSueldo = ()=>{
-      burbujaBot('¿Cuál es el <b>ingreso mensual aproximado</b> de '+nombreP()+'? 💵<span class="peque">En soles. Es el dato que pide Rena Ware para evaluar el crédito.</span>').then(()=>{
+      burbujaBot(esAlq
+        ? '¿De cuánto es el <b>alquiler mensual</b> de esta propiedad? 💵<span class="peque">En soles. Es el ingreso que Rena Ware evalúa.</span>'
+        : '¿Cuál es el <b>ingreso mensual aproximado</b> de '+nombreP()+'? 💵<span class="peque">En soles. Es el dato que pide Rena Ware para evaluar el crédito.</span>').then(()=>{
         dockTexto({tipo:'texto', inputmode:'decimal', placeholder:'Ej.: 2500',
           valida(v){
             const n = parseFloat(String(v).replace(/[^\d.]/g,''));
@@ -2651,6 +2664,9 @@ function flujoLaborales(persona, alFinal, fuentePreset){
           guarda(v){ f.sueldo=parseFloat(v); }}, luego);
       });
     };
+    /* Un alquiler no tiene cargo, pero sí monto: antes se saltaban los dos y
+       la fuente entraba sin ingreso, que es justo lo que se evalúa. */
+    if(esAlq){ pideSueldo(); return; }
     burbujaBot('¿Qué <b>cargo u ocupación</b> tiene '+nombreP()+' ahí? 💼<span class="peque">Máximo 16 caracteres: es el espacio que da Rena Ware. '+
       'Ejemplos: COMERCIANTE, PROFESORA, CONSTRUC. CIVIL.<br>'+
       'Si el negocio no tiene nombre, en Rena Ware va el giro («'+escapa(f.dedicacion||'a qué se dedica')+'»); '+
@@ -3261,16 +3277,18 @@ async function irResumenAfiliado(){
   card.className='fila-resumen';
   let html = '<div class="resumen"><h3>Resumen del registro de afiliado</h3>';
   if(datos.esPropio){
-    html += fila('Asesor que afilia y registra', datos.asesorAfiliador);
+    html += fila('Asesor que afilia y registra', conCodigoAsesor(datos.asesorAfiliador));
   }else{
-    html += fila('Asesor que afilia', datos.asesorAfiliador);
+    html += fila('Asesor que afilia', conCodigoAsesor(datos.asesorAfiliador));
   }
   html += fila('Afiliado', datos.nombreAfiliado);
-  html += '<div class="res-grid">'+fila('DNI', datos.dni)+fila('Celular', datos.celular)+'</div>';
+  html += '<div class="res-grid">'+fila(etiquetaDoc(), datos.dni)+fila('Celular', datos.celular)+'</div>';
   html += fila('Correo', datos.email);
   html += fila('Ubicación', datos.distrito+' · '+datos.provincia+' · '+datos.departamento);
   html += fila('Dirección', datos.direccion);
-  html += '<div class="res-grid">'+fila('Pago de S/ 70', datos.metodoPago)+
+  /* Antes solo decía el medio: el número de operación y la fecha del voucher
+     son justo lo que se revisa contra el banco. */
+  html += '<div class="res-grid">'+fila('Pago de S/ 70', resumenPagosRw() || datos.metodoPago)+
           '<div class="res-item"><div class="res-label">Constancia'+((datos.constancias||[]).length>1?'s ('+datos.constancias.length+')':'')+'</div>'+
           (datos.constancias||[]).map(u=>'<img class="res-foto" src="'+u+'">').join('')+'</div></div>';
   html += '</div>';
@@ -3340,6 +3358,15 @@ function vPago(){
 function vConstancias(){
   const n = (datos.constancias||[]).length;
   return n ? (n===1 ? '1 archivo ✔' : n+' archivos ✔') : '';
+}
+/* Nombre del asesor con su código detrás, o «sin código» cuando no lo tiene:
+   el vacío se lee como un olvido y el código es lo que cobra la comisión. */
+function etiquetaDoc(){ return datos.tipoDoc==='CE' ? 'Carné de extranjería' : 'DNI'; }
+function conCodigoAsesor(nombre){
+  const n = String(nombre||'').trim();
+  if(!n) return '';
+  const c = String(datos.asesorCodigo||'').trim();
+  return n + (c ? ' · código '+c : ' · (sin código)');
 }
 function vRecibo(){
   if(!datos.reciboTipo) return '';
@@ -3603,15 +3630,17 @@ async function irResumenVenta(){
   card.className='fila-resumen';
   let html = '<div class="resumen"><h3>Resumen de la venta</h3>';
   html += fila('Tipo de venta', datos.ventaModalidad+' · '+datos.ventaTipo);
+  /* El código es lo que Rena Ware usa para saber de quién es la venta: sin
+     él, el nombre solo no alcanza para reclamar una comisión. */
   if(datos.ventaTipo==='Venta a terceros'){
-    html += fila('Asesor que vende', datos.ventaVendedor);
+    html += fila('Asesor que vende', conCodigoAsesor(datos.ventaVendedor));
     html += fila('Cliente', datos.ventaComprador);
   }else{
-    html += fila('Asesor / cliente (autocompra)', datos.ventaComprador);
+    html += fila('Asesor / cliente (autocompra)', conCodigoAsesor(datos.ventaComprador));
   }
   let comp = datos.comprobante;
   if(datos.comprobante==='Factura' && datos.ruc) comp += ' · RUC '+datos.ruc;
-  html += '<div class="res-grid">'+fila('DNI', datos.ventaDni)+fila('Comprobante', comp)+
+  html += '<div class="res-grid">'+fila(etiquetaDoc(), datos.ventaDni)+fila('Comprobante', comp)+
     (datos.razonSocial ? fila('Razón social', datos.razonSocial) : '')+'</div>';
   html += '<div class="res-grid">'+fila('Celular', datos.ventaCelular)+fila('Inicial', fmtSoles(datos.inicial))+'</div>';
   html += fila('Correo', datos.ventaCorreo);
@@ -3741,14 +3770,14 @@ async function irResumenCredito(){
   let html = '<div class="resumen"><h3>Resumen de la venta al crédito</h3>';
   html += fila('Tipo', 'Crédito · '+datos.ventaTipo+' · '+datos.cuotas+' cuotas');
   if(datos.ventaTipo==='Venta a terceros'){
-    html += fila('Asesor que vende', datos.ventaVendedor);
+    html += fila('Asesor que vende', conCodigoAsesor(datos.ventaVendedor));
     html += fila('Cliente titular', datos.ventaComprador);
   }else{
-    html += fila('Asesor / cliente (autocompra)', datos.ventaComprador);
+    html += fila('Asesor / cliente (autocompra)', conCodigoAsesor(datos.ventaComprador));
   }
   let comp = datos.comprobante;
   if(datos.comprobante==='Factura' && datos.ruc) comp += ' · RUC '+datos.ruc;
-  html += '<div class="res-grid">'+fila('DNI', datos.ventaDni)+fila('Comprobante', comp)+
+  html += '<div class="res-grid">'+fila(etiquetaDoc(), datos.ventaDni)+fila('Comprobante', comp)+
     (datos.razonSocial ? fila('Razón social', datos.razonSocial) : '')+'</div>';
   html += '<div class="res-grid">'+fila('Celular', datos.ventaCelular)+fila('Inicial', fmtSoles(datos.inicial))+'</div>';
   html += fila('Correo', datos.ventaCorreo);
@@ -3845,6 +3874,11 @@ async function enviarCredito(){
     entrega_distrito:     datos.entregaEn==='Otra' ? datos.entregaDistrito : '',
     entrega_provincia:    datos.entregaEn==='Otra' ? datos.entregaProvincia : '',
     entrega_departamento: datos.entregaEn==='Otra' ? datos.entregaDepartamento : '',
+    /* La nota («AUTOCOMPRA», sobre todo) iba solo en el contado: en crédito
+       no llegaba al panel ni al contrato, que es donde hace falta. */
+    nota_pedido: datos.notaPedido || '',
+    recibo_pendiente: !!datos.reciboPendiente,
+    modo_pago: datos.modoPago || '',
     zona_credito: 'Sí'
   };
   const envio = await rwEnviar(registro, archivosDeRegistro());
@@ -4301,17 +4335,23 @@ function intentaConocidas(id){
 
 
 /* ---------- 2 bis. Lista completa de asesores para el desplegable ---------- */
-let _asesoresCache = null;
+/* La lista se guardaba para toda la sesión: si en el panel se corregía un
+   código o un DNI, el formulario seguía ofreciendo el viejo hasta recargar.
+   Se refresca cada 3 minutos, que es poco para el uso y suficiente para que
+   una corrección se vea el mismo día. */
+let _asesoresCache = null, _asesoresCacheHora = 0;
+const ASESORES_VIGENCIA = 3 * 60 * 1000;
+function olvidaAsesores(){ _asesoresCache = null; _asesoresCacheHora = 0; }
 async function listaAsesores(){
-  if(_asesoresCache) return _asesoresCache;
-  if(!CONECTADO) return [];
+  if(_asesoresCache && (Date.now() - _asesoresCacheHora) < ASESORES_VIGENCIA) return _asesoresCache;
+  if(!CONECTADO) return _asesoresCache || [];
   try{
     const r = await fetch(SUPABASE_URL+'/rest/v1/rpc/listar_asesores', {
       method:'POST', headers:{apikey:SUPABASE_KEY, Authorization:'Bearer '+SUPABASE_KEY,
       'Content-Type':'application/json'}, body:'{}'});
-    if(r.ok){ _asesoresCache = await r.json(); return _asesoresCache; }
+    if(r.ok){ _asesoresCache = await r.json(); _asesoresCacheHora = Date.now(); return _asesoresCache; }
   }catch(e){}
-  return [];
+  return _asesoresCache || [];   /* sin señal, mejor la de antes que ninguna */
 }
 /* Coincidencia por palabras sueltas, en cualquier orden.
    "chef cubiertos" encuentra "JUEGO CHEF II + CUBIERTOS". */
@@ -4581,6 +4621,10 @@ function archivosDeRegistro(){
 /* ================== FALTANTES Y PENDIENTES ================== */
 function faltantes(){
   const f = [];
+  /* Sin medio de pago el pedido no se puede ingresar en Rena Ware, así que
+     es tan obligatorio como la constancia. */
+  if(!(datos.pagos||[]).length && !(esVenta() ? datos.ventaMedioPago : datos.metodoPago))
+    f.push({txt:'Medio de pago', fn:()=>{ editando=true; flujoPagoRw(true); }});
   if(!(datos.constancias||[]).length) f.push({txt:'Foto de la constancia de pago', fn:()=>{
     editando=true; fotoCtx='voucher';
     burbujaBot(PASOS.foto.pregunta()).then(()=>dockFoto('📎 Subir constancia (foto o PDF)'));
