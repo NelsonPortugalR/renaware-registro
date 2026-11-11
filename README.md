@@ -59,6 +59,13 @@ formulario trae lo que la base ya sabe y se salta esas preguntas:
 | un **cliente** de ventas anteriores | DNI, y las opciones de celular, correo, dirección, referencias, trabajo y RUC | `buscar_clientes` + `opciones_cliente` |
 | un **asesor** | DNI, y su celular, correo y RUC como opción | `datos_asesor` + `opciones_cliente` |
 
+**La dirección laboral del contrato es la misma que va al portal**: la de
+trabajo, o la de la casa si no hay. En pensión mandaba la de la institución (la
+UGEL, por ejemplo) y en «Alquila propiedades» la de la propiedad alquilada, así
+que el contrato y el portal decían cosas distintas de la misma venta. Las dos
+siguen guardadas en su campo; si se las quiere en los dos sitios, se escriben en
+«dirección de trabajo», que es la que alimenta a ambos (`_laboral()`).
+
 Las dos listas salen juntas en la misma pregunta y en cualquier tipo de venta:
 un asesor del equipo también compra, y no siempre para sí mismo. La misma
 persona aparece **una sola vez** (`mismaPersona()`, dos palabras largas
