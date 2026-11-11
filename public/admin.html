@@ -854,7 +854,15 @@ function _laboral(f, d, r){
   if(fu==='Independiente'){
     return [emp ? emp+' — '+ded : ded, ruc, dt, cargoCap || 'Independiente', t];
   }
-  if(fu==='Alquila propiedades')  return [ded, ruc, (f.propiedad || dt), cargoCap || 'Propietario', t];
+  if(fu==='Alquila propiedades'){
+    /* Igual que en pensión: la dirección del contrato es la misma que se
+       exporta al portal —la de trabajo, o la de la casa si no hay—. Antes
+       mandaba la dirección de la propiedad alquilada, así que el contrato y el
+       portal decían cosas distintas de la misma venta. La propiedad se sigue
+       guardando en su campo; si se la quiere en los dos sitios, se escribe en
+       «dirección de trabajo», que es la que alimenta a ambos. */
+    return [ded, ruc, dt, cargoCap || 'Propietario', t];
+  }
   if(fu==='Pensión de jubilación'){
     let e = f.institucion ? 'Jubilado de '+f.institucion : 'Jubilado';
     if(emp) e += ' · pensión '+emp;
@@ -1438,7 +1446,8 @@ if(r.tipo !== 'afiliacion')
         campo('RUC', f.ruc, 'id="l-ruc-'+i+'" class="mono"')+
         campo('Institución donde se jubiló', f.institucion, 'id="l-inst-'+i+'"')+
         campo('Dirección de la institución', f.direccionInst, 'id="l-instdir-'+i+'"')+
-        campo('Dirección de la propiedad en alquiler', f.propiedad, 'id="l-prop-'+i+'"', {ancho:1})+
+        campo('Dirección de la propiedad en alquiler', f.propiedad, 'id="l-prop-'+i+'"', {ancho:1,
+              nota:'Queda guardada, pero el contrato imprime la dirección de trabajo (o la de casa), igual que el portal'})+
         campo('Ingreso de esta fuente', (f.sueldo!=null ? f.sueldo : (i===0 ? r.sueldoTitular : '')),
               'type="number" step="0.01" id="l-sueldo-'+i+'" class="mono"')+
         ((f.titular==='Cónyuge')
