@@ -43,7 +43,9 @@
     background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.22);
     border-radius:99px;padding:5px 14px;
   }
-  .buscar input{background:none;border:0;outline:0;color:#fff;width:210px;font-size:14px}
+  /* Buscar es ahora la puerta de entrada al panel, no un extra: la caja
+     ocupa lo que haga falta para que se lea lo que se escribe. */
+  .buscar input{background:none;border:0;outline:0;color:#fff;width:330px;font-size:14px}
   .buscar input::placeholder{color:rgba(255,255,255,.6)}
   .btn-top{
     background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.24);
@@ -53,47 +55,13 @@
   .prueba{background:var(--ambar-f);color:var(--ambar);font-size:12.5px;font-weight:700;
     text-align:center;padding:5px;letter-spacing:.02em}
 
-  /* ---------- banda de período (elemento firma) ---------- */
-  .banda{background:var(--superficie);border-bottom:1px solid var(--linea);padding:18px 22px 14px}
+  /* La usa el carrusel de versiones de la ficha */
   .banda-fila{display:flex;align-items:flex-start;gap:28px;flex-wrap:wrap}
-  .nav-per{display:flex;align-items:center;gap:10px}
-  .nav-per button{
-    width:34px;height:34px;border-radius:50%;border:1.5px solid var(--linea);
-    background:var(--superficie);color:var(--acero);font-size:17px;line-height:1;
-  }
-  .nav-per button:hover:not(:disabled){background:var(--linea2);border-color:var(--acero2)}
-  .nav-per button:disabled{opacity:.35;cursor:default}
-  .per-num{font-family:'Bitter',serif;font-size:30px;font-weight:700;line-height:1;letter-spacing:-.02em}
-  .per-num small{font-size:13px;font-weight:600;color:var(--suave);display:block;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;font-family:'Atkinson Hyperlegible',sans-serif}
-  .per-fechas{font-size:14px;color:var(--suave);margin-top:5px}
 
   /* tira de 14 días */
-  .tira{display:flex;gap:3px;margin-top:4px}
-  .tira i{
-    width:19px;height:30px;border-radius:4px;background:var(--linea2);
-    border:1px solid var(--linea);display:block;position:relative;
-  }
-  .tira i.pas{background:#C6D3DD;border-color:#B4C4D1}
-  .tira i.hoy{background:var(--acero);border-color:var(--acero)}
-  .tira i.fds{background:repeating-linear-gradient(45deg,#E6EBEF,#E6EBEF 3px,#F4F7F9 3px,#F4F7F9 6px)}
-  .tira i.hoy.fds{background:var(--acero)}
-  .tira-pie{font-size:13px;color:var(--suave);margin-top:6px}
-  .tira-pie b{color:var(--tinta)}
   .urgente{color:var(--rojo);font-weight:700}
 
   /* barra de avance del pipeline */
-  .pipe-wrap{flex:1;min-width:340px}
-  .pipe{display:flex;height:26px;border-radius:7px;overflow:hidden;border:1px solid var(--linea);background:var(--linea2)}
-  .pipe span{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;transition:width .35s ease}
-  .pipe .s-nuevo{background:var(--ambar)}
-  .pipe .s-revisado{background:var(--acero2)}
-  .pipe .s-ingresado{background:#1F5C86}
-  .pipe .s-procesado{background:var(--verde)}
-  .leyenda{display:flex;gap:16px;flex-wrap:wrap;margin-top:9px;font-size:13px}
-  .leyenda span{display:flex;align-items:center;gap:6px;color:var(--suave)}
-  .leyenda i{width:11px;height:11px;border-radius:3px;display:block}
-  .leyenda b{color:var(--tinta)}
-  .meta-ok{color:var(--verde);font-weight:700}
 
   /* ---------- filtros ---------- */
   .filtros{
@@ -131,30 +99,10 @@
   .b-afiliacion{background:#EEE9F7;color:#54418C}
   .b-contado{background:#E3F3EF;color:var(--verde)}
   .b-credito{background:#E7EFF7;color:var(--acero)}
-  .est{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;white-space:nowrap}
-  .punto{width:9px;height:9px;border-radius:50%;display:block;flex-shrink:0}
-  .e-nuevo .punto{background:var(--ambar)} .e-nuevo{color:var(--ambar)}
-  .e-revisado .punto{background:var(--acero2)} .e-revisado{color:var(--acero2)}
-  .e-ingresado .punto{background:#1F5C86} .e-ingresado{color:#1F5C86}
-  .e-procesado .punto{background:var(--verde)} .e-procesado{color:var(--verde)}
   .r-aprobado{background:var(--verde-f);color:var(--verde)}
   .r-rechazado{background:var(--rojo-f);color:var(--rojo)}
   .r-observado{background:var(--ambar-f);color:var(--ambar)}
   .r-pendiente{background:var(--linea2);color:var(--suave)}
-  .vence{font-size:11.5px;color:var(--ambar);font-weight:700;margin-top:3px}
-  .vence.urgente{color:var(--rojo)}
-  .alerta-obs{
-    margin:0 0 14px;background:var(--ambar-f);border:1.5px solid rgba(160,110,0,.35);
-    border-radius:10px;padding:10px 15px;font-size:13.5px;font-weight:700;color:var(--ambar);
-    cursor:pointer;display:flex;align-items:center;gap:9px;
-  }
-  .alerta-obs:hover{border-color:var(--ambar)}
-  .alerta-obs.roja{background:var(--rojo-f);border-color:rgba(160,48,48,.4);color:var(--rojo)}
-  .avanzar{
-    border:1.5px solid var(--linea);background:var(--superficie);border-radius:7px;
-    padding:3px 9px;font-size:12px;font-weight:700;color:var(--acero);margin-left:8px;
-  }
-  .avanzar:hover{background:var(--acero);color:#fff;border-color:var(--acero)}
   .vacio{padding:60px 20px;text-align:center;color:var(--suave);background:var(--superficie);
     border:1px dashed var(--linea);border-radius:var(--radio)}
   .vacio b{display:block;font-size:17px;color:var(--tinta);margin-bottom:6px;font-family:'Bitter',serif}
@@ -191,28 +139,13 @@
   .campo .calc{font-size:11.5px;color:var(--acero2);font-weight:700}
   .campo textarea{min-height:64px;resize:vertical}
 
-  /* pipeline de estados en el detalle */
-  .pasos{display:flex;gap:0;margin-bottom:4px}
-  .paso{
-    flex:1;border:1.5px solid var(--linea);background:var(--superficie);padding:9px 4px;
-    font-size:12.5px;font-weight:700;color:var(--suave);position:relative;
-  }
-  .paso:first-child{border-radius:9px 0 0 9px}
-  .paso:last-child{border-radius:0 9px 9px 0}
-  .paso+.paso{border-left:0}
-  .paso:hover{background:var(--linea2);color:var(--acero)}
-  .paso.hecho{background:var(--acero);border-color:var(--acero);color:#fff}
-  .paso.hecho+.paso.hecho{border-left-color:rgba(255,255,255,.25)}
-  .paso small{display:block;font-size:10.5px;font-weight:400;opacity:.75;margin-top:1px}
   .ayuda{font-size:12.5px;color:var(--suave);margin-top:9px;line-height:1.4}
 
-  .res-btns{display:flex;gap:8px;flex-wrap:wrap}
-  .res-btn{border:1.5px solid var(--linea);background:var(--superficie);border-radius:8px;
-    padding:8px 15px;font-size:13.5px;font-weight:700;color:var(--suave)}
-  .res-btn:hover{border-color:var(--acero2);color:var(--acero)}
-  .res-btn.on.obs{background:var(--ambar);border-color:var(--ambar);color:#fff}
-  .res-btn.on.apr{background:var(--verde);border-color:var(--verde);color:#fff}
-  .res-btn.on.rec{background:var(--rojo);border-color:var(--rojo);color:#fff}
+  /* El período ya no manda en la vista: va como sello en cada registro */
+  .per-tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--acero2);
+    background:var(--linea2);border:1px solid var(--linea);border-radius:99px;
+    padding:2px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+
 
   .obs-item{border-left:3px solid var(--ambar);background:var(--ambar-f);border-radius:0 8px 8px 0;
     padding:9px 12px;margin-bottom:8px;font-size:13.5px}
@@ -344,7 +277,6 @@
   .reg-card .tit{font-size:15.5px;font-weight:700;line-height:1.3}
   .reg-pie{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
   .reg-monto{margin-left:auto;font-weight:700;font-size:14.5px}
-  .reg-card .avanzar{width:100%;margin-top:10px}
   .ayuda-mas summary{cursor:pointer;font-weight:700;color:var(--acero2);margin-top:5px;
     list-style:none;display:inline-block}
   .ayuda-mas summary::before{content:'▸ '}
@@ -353,7 +285,6 @@
   .as-nueva-tag{font-size:11px;font-weight:700;color:#2EA043;margin-bottom:4px}
   @media (max-width:900px){
     .campos{grid-template-columns:1fr}
-    .banda-fila{gap:16px}
     .buscar input{width:120px}
     table{font-size:13px}
     .ocultar-chico{display:none}
@@ -377,13 +308,6 @@
 
     /* Banda del período, compacta. La tira de 14 cuadritos dice lo mismo que
        «Día 7 de 14 · quedan 7 días», que va escrito justo debajo. */
-    .banda{padding:10px 14px}
-    .banda-fila{flex-direction:column;gap:10px}
-    .nav-per{align-self:flex-start}
-    .per-num{font-size:23px}
-    .tira{display:none}
-    .pipe-wrap{min-width:0;width:100%}
-    .leyenda{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;margin-top:8px;font-size:12.5px}
 
     /* Los filtros, en una tira que se desliza de lado: eran tres filas
        apiladas, y encima fijas a una altura pensada para la laptop. */
@@ -463,7 +387,7 @@
   <h1>REGISTROS</h1><span class="sub">Equipo Arequipa</span>
   <div class="sp"></div>
   <div class="buscar">
-    <span>🔍</span><input id="q" placeholder="Buscar nombre, DNI o asesor…" autocomplete="off">
+    <span>🔍</span><input id="q" placeholder="Nombre, DNI, N° de pedido, asesor…" autocomplete="off">
   </div>
   <button class="btn-top" id="btnListas">Listas de precios</button>
   <button class="btn-top" id="btnAsesores">Asesores</button>
@@ -483,29 +407,10 @@
   </div>
 </div>
 
-<!-- ===== Banda de período ===== -->
-<div class="banda">
-  <div class="banda-fila">
-    <div class="nav-per">
-      <button id="pAnt" title="Período anterior">‹</button>
-      <div>
-        <div class="per-num"><small>Período</small><span id="pNum">16</span></div>
-      </div>
-      <button id="pSig" title="Período siguiente">›</button>
-    </div>
-    <div>
-      <div class="tira" id="tira"></div>
-      <div class="tira-pie" id="tiraPie"></div>
-      <div class="per-fechas" id="pFechas"></div>
-    </div>
-    <div class="pipe-wrap">
-      <div class="pipe" id="pipe"></div>
-      <div class="leyenda" id="leyenda"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Filtros ===== -->
+<!-- ===== Filtros =====
+     El panel se organizaba por período: para encontrar un pedido había que
+     acordarse de en cuál se ingresó. Ahora la lista son todos los registros y
+     el período es un filtro más, al lado del asesor. -->
 <div class="filtros" id="filtros">
   <button class="fchip on" data-f="tipo" data-v="">Todos</button>
   <button class="fchip" data-f="tipo" data-v="ventas">Ventas</button>
@@ -513,24 +418,12 @@
   <button class="fchip" data-f="tipo" data-v="contado">· contado</button>
   <button class="fchip" data-f="tipo" data-v="credito">· crédito</button>
   <div class="fsep"></div>
-  <button class="fchip on" data-f="estado" data-v="">Cualquier estado</button>
-  <button class="fchip" data-f="estado" data-v="nuevo">Por revisar</button>
-  <button class="fchip" data-f="estado" data-v="revisado">Revisado</button>
-  <button class="fchip" data-f="estado" data-v="ingresado">Ingresado</button>
-  <button class="fchip" data-f="estado" data-v="procesado">Procesado</button>
-  <div class="fsep"></div>
   <select class="fsel" id="fAsesor"><option value="">Todos los asesores</option></select>
-  <select class="fsel" id="fResultado">
-    <option value="">Crédito: cualquier resultado</option>
-    <option value="pendiente">Sin evaluar</option>
-    <option value="observado">Observado</option>
-    <option value="aprobado">Aprobado</option>
-    <option value="rechazado">Rechazado</option>
-  </select>
+  <select class="fsel" id="fPeriodo"><option value="">Todos los períodos</option></select>
   <span class="cuenta" id="cuenta"></span>
 </div>
 
-<div class="zona"><div id="alertaObs"></div><div id="tabla"></div></div>
+<div class="zona"><div id="tabla"></div></div>
 
 <!-- ===== Detalle ===== -->
 <div class="velo" id="velo"></div>
@@ -1138,24 +1031,41 @@ async function generaContrato(r, reescrito){
 /* ---------- carga y guardado ---------- */
 let DATOS = [];
 let cargando = false;
+/* Se cargan TODOS los registros, no los del período abierto. Son unos cientos
+   —cabían de sobra en una pantalla de búsqueda— y es lo que permite escribir
+   un apellido o un número de pedido y encontrarlo sin saber de qué quincena
+   fue. El nombre viejo se mantiene porque lo llaman varios sitios. */
 async function cargarPeriodo(){
   cargando = true;
-  $('#bandaEstado').textContent = 'Cargando período…';
+  $('#bandaEstado').textContent = 'Cargando registros…';
   try{
-    const filas = await sbGet('registros?'+SELECT+'&periodo_efectivo=eq.'+vista.periodo+'&order=fecha.desc');
+    const filas = await sbGet('registros?'+SELECT+'&order=fecha.desc&limit=3000');
     DATOS = filas.map(aPanel);
     const asesores = [...new Set(DATOS.map(r=>r.asesor).filter(Boolean))].sort();
     const sel = $('#fAsesor');
     sel.innerHTML = '<option value="">Todos los asesores</option>';
     asesores.forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o); });
     sel.value = vista.asesor;
-    $('#bandaEstado').textContent = 'Conectado · '+DATOS.length+(DATOS.length===1?' registro':' registros')+' en este período';
+
+    /* Los períodos que de verdad tienen registros, del más nuevo al más viejo */
+    const pers = [...new Set(DATOS.map(r=>r.periodo).filter(p=>p!=null))].sort((a,b)=>b-a);
+    const selP = $('#fPeriodo');
+    selP.innerHTML = '<option value="">Todos los períodos</option>';
+    pers.forEach(i=>{
+      const p = periodo(i), o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = 'Período '+p.numero+' · '+fFecha(p.ini)+' a '+fFecha(p.fin)+
+        (i===indicePeriodo(hoyUTC()) ? ' (el de hoy)' : '');
+      selP.appendChild(o);
+    });
+    selP.value = vista.periodo==null ? '' : String(vista.periodo);
+    $('#bandaEstado').textContent = 'Conectado · '+DATOS.length+(DATOS.length===1?' registro':' registros');
   }catch(e){
     $('#bandaEstado').textContent = 'No se pudo cargar: '+String(e.message||e).slice(0,120);
     DATOS = [];
   }
   cargando = false;
-  pintaBanda(); pintaTabla();
+  pintaTabla();
 }
 function guardar(){ /* cada cambio se guarda en Supabase al momento */ }
 
@@ -1170,104 +1080,42 @@ const ESTADOS = [
 ];
 const ORDEN = ESTADOS.map(e=>e.k);
 const TIPOS = {afiliacion:'Afiliación', contado:'Contado', credito:'Crédito'};
-let vista = { periodo: indicePeriodo(hoyUTC()), tipo:'', estado:'', asesor:'', resultado:'', q:'' };
+/* periodo: null = todos. Deja de ser el eje del panel y pasa a ser un filtro. */
+let vista = { periodo: null, tipo:'', asesor:'', q:'' };
 let abierto = null;
 
 const $ = s => document.querySelector(s);
 
-/* ---------- banda de período ---------- */
-function pintaBanda(){
-  const p = periodo(vista.periodo);
-  $('#pNum').textContent = p.numero;
-  $('#pFechas').textContent = fLarga(p.ini)+' — '+fLarga(p.fin)+' · '+p.ciclo;
-  $('#pSig').disabled = p.i >= indicePeriodo(hoyUTC());
-
-  // tira de 14 días
-  const hoy = hoyUTC();
-  let tira = '';
-  for(let k=0;k<14;k++){
-    const dia = p.ini + k*DIA, dw = new Date(dia).getUTCDay();
-    const cls = [dia<hoy?'pas':'', dia===hoy?'hoy':'', (dw===0||dw===6)?'fds':''].filter(Boolean).join(' ');
-    tira += '<i class="'+cls+'" title="'+fLarga(dia)+'"></i>';
-  }
-  $('#tira').innerHTML = tira;
-
-  if(hoy > p.fin){
-    $('#tiraPie').innerHTML = '<b>Período cerrado</b>';
-  } else if(hoy < p.ini){
-    $('#tiraPie').innerHTML = '<b>Período por comenzar</b>';
-  } else {
-    const num = Math.round((hoy - p.ini)/DIA)+1, faltan = Math.round((p.fin - hoy)/DIA);
-    $('#tiraPie').innerHTML = 'Día <b>'+num+' de 14</b> · '+
-      (faltan===0 ? '<span class="urgente">cierra hoy</span>'
-        : faltan<=2 ? '<span class="urgente">quedan '+faltan+' días</span>'
-        : 'quedan <b>'+faltan+'</b> días');
-  }
-
-  // barra de avance
-  const delP = DATOS.filter(r=>r.periodo===p.i);
-  const cont = {}; ORDEN.forEach(k=>cont[k]=delP.filter(r=>r.estado===k).length);
-  const tot = delP.length || 1;
-  $('#pipe').innerHTML = ORDEN.map(k=>{
-    const n = cont[k]; if(!n) return '';
-    return '<span class="s-'+k+'" style="width:'+(n/tot*100)+'%">'+(n/tot>=.08?n:'')+'</span>';
-  }).join('');
-  const listos = cont.procesado;
-  $('#leyenda').innerHTML = ESTADOS.map(e=>
-      '<span><i class="s-'+e.k+'" style="background:'+({nuevo:'#A8700A',revisado:'#2E6FA7',ingresado:'#1F5C86',procesado:'#0C7461'})[e.k]+'"></i><b>'+cont[e.k]+'</b> '+e.t.toLowerCase()+'</span>'
-    ).join('') +
-    (delP.length && listos===delP.length
-      ? '<span class="meta-ok">✓ Período completo</span>'
-      : '<span>Meta: <b>'+delP.length+'</b> procesados al cierre</span>');
-}
-
 /* ---------- tabla ---------- */
+/* Todo lo que se escribe en el buscador tiene que encontrar: el apellido, el
+   DNI, el número de pedido (que es por donde se busca un reescrito), el código
+   del registro y el producto. Las palabras pueden ir en cualquier orden. */
+function textoBuscable(r){
+  return [r.titular, r.dni, r.asesor, r.producto, r.numeroPedido, r.codigoReg,
+          r.celular, r.correo, r.distrito, (r.pedido&&r.pedido.codigo)||'']
+         .filter(Boolean).join(' ').toLowerCase();
+}
 function filtrados(){
-  const q = vista.q.trim().toLowerCase();
+  const palabras = vista.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return DATOS.filter(r=>{
-    if(r.periodo !== vista.periodo) return false;
+    if(vista.periodo != null && r.periodo !== vista.periodo) return false;
     if(vista.tipo === 'ventas'){ if(r.tipo === 'afiliacion') return false; }
     else if(vista.tipo && r.tipo !== vista.tipo) return false;
-    if(vista.estado && r.estado !== vista.estado) return false;
     if(vista.asesor && r.asesor !== vista.asesor) return false;
-    if(vista.resultado && (r.resultado||'') !== vista.resultado) return false;
-    if(q && !(r.titular+' '+r.dni+' '+r.asesor+' '+r.producto).toLowerCase().includes(q)) return false;
+    if(palabras.length){
+      const t = textoBuscable(r);
+      if(!palabras.every(p=>t.includes(p))) return false;
+    }
     return true;
-  }).sort((a,b)=> ORDEN.indexOf(a.estado)-ORDEN.indexOf(b.estado) || a.fecha - b.fecha || a.titular.localeCompare(b.titular));
+  }).sort((a,b)=> b.fecha - a.fecha || a.titular.localeCompare(b.titular));
 }
-function chipEstado(r){
-  const e = ESTADOS.find(x=>x.k===r.estado);
-  return '<span class="est e-'+r.estado+'"><i class="punto"></i>'+e.t+'</span>';
-}
-function venceObs(r){
-  if(r.resultado!=='observado' || !r.observaciones.length) return null;
-  const vence = r.observaciones[r.observaciones.length-1].f + 15*DIA;
-  return { vence, dias: Math.round((vence - hoyUTC())/DIA) };
-}
-function chipResultado(r){
-  if(r.tipo!=='credito') return '';
-  const m = {pendiente:'Sin evaluar', observado:'Observado', aprobado:'Aprobado', rechazado:'Rechazado'};
-  let h = '<span class="badge r-'+(r.resultado||'pendiente')+'">'+m[r.resultado||'pendiente']+'</span>';
-  const v = venceObs(r);
-  if(v) h += '<div class="vence'+(v.dias<=3?' urgente':'')+'">'+(v.dias<0?'plazo vencido':v.dias===0?'vence hoy':'vence en '+v.dias+' d')+'</div>';
-  return h;
-}
-function pintaAlerta(){
-  const obs = DATOS.filter(r=>r.periodo===vista.periodo && r.resultado==='observado' && r.observaciones.length)
-    .map(r=>({r, v:venceObs(r)})).sort((a,b)=>a.v.dias-b.v.dias);
-  const el = $('#alertaObs');
-  if(!obs.length){ el.innerHTML=''; return; }
-  const peor = obs[0];
-  el.innerHTML = '<div class="alerta-obs'+(peor.v.dias<=3?' roja':'')+'" id="irObs">⚠️ '+
-    obs.length+(obs.length===1?' crédito observado':' créditos observados')+' por subsanar · el más próximo ('+
-    peor.r.titular.split(' ')[0]+') '+(peor.v.dias<0?'ya venció':peor.v.dias===0?'vence hoy':'vence en '+peor.v.dias+' días')+
-    ' — toca para verlos</div>';
-  document.getElementById('irObs').onclick = ()=>{
-    vista.resultado='observado'; $('#fResultado').value='observado'; pintaTabla();
-  };
+/* El período dejó de mandar en la vista, pero saber de cuál es un pedido sigue
+   sirviendo: va como dato en cada fila. */
+function selloPeriodo(r){
+  if(r.periodo == null) return '';
+  return '<span class="per-tag">P'+periodo(r.periodo).numero+'</span>';
 }
 function pintaTabla(){
-  pintaAlerta();
   const lista = filtrados();
   $('#cuenta').textContent = lista.length ? lista.length+(lista.length===1?' registro':' registros') : '';
   if(!lista.length){
@@ -1289,38 +1137,35 @@ function pintaTabla(){
   $('#tabla').innerHTML =
     '<table><thead><tr>'+
     '<th>Fecha</th><th>Tipo</th><th>Titular</th><th class="ocultar-chico">Asesor</th>'+
-    '<th class="ocultar-chico">Detalle</th><th class="num">Inicial</th><th>Estado</th><th>Evaluación</th>'+
+    '<th class="ocultar-chico">Detalle</th><th>N° pedido</th><th class="num">Inicial</th><th>Período</th>'+
     '</tr></thead><tbody>'+
     lista.map(r=>
       '<tr data-id="'+r.id+'" class="'+(abierto===r.id?'sel':'')+'">'+
       '<td class="mono" style="white-space:nowrap">'+fFecha(r.fecha)+'</td>'+
       '<td><span class="badge b-'+r.tipo+'">'+TIPOS[r.tipo]+'</span></td>'+
-      '<td><div class="tit">'+r.titular+'</div><div class="dni mono">'+r.dni+'</div></td>'+
-      '<td class="ocultar-chico">'+r.asesor+'</td>'+
-      '<td class="ocultar-chico" style="max-width:230px">'+r.producto+'</td>'+
+      '<td><div class="tit">'+escapa(r.titular)+'</div><div class="dni mono">'+escapa(r.dni)+'</div></td>'+
+      '<td class="ocultar-chico">'+escapa(r.asesor)+'</td>'+
+      '<td class="ocultar-chico" style="max-width:230px">'+escapa(r.producto)+'</td>'+
+      '<td class="mono">'+(r.numeroPedido ? escapa(r.numeroPedido) : '<span class="peque">—</span>')+'</td>'+
       '<td class="num mono">'+soles(r.inicial)+'</td>'+
-      '<td>'+chipEstado(r)+(r.estado!=='procesado'?'<button class="avanzar" data-av="'+r.id+'">→ '+ESTADOS[ORDEN.indexOf(r.estado)+1].t+'</button>':'')+'</td>'+
-      '<td>'+chipResultado(r)+'</td></tr>'
+      '<td>'+selloPeriodo(r)+'</td></tr>'
     ).join('')+'</tbody></table>';
 }
 
 /* Un registro de la lista, en tarjeta. Lleva el mismo data-id que la fila de
    la tabla, así que abrir la ficha y avanzar el estado funcionan igual. */
 function filaTarjeta(r){
-  const i = ORDEN.indexOf(r.estado);
-  const sig = (r.estado !== 'procesado' && ESTADOS[i+1]) ? ESTADOS[i+1] : null;
-  const evalua = chipResultado(r);
   return '<div class="reg-card'+(abierto===r.id?' sel':'')+'" data-id="'+r.id+'">'+
     '<div class="reg-cab"><span class="badge b-'+r.tipo+'">'+TIPOS[r.tipo]+'</span>'+
       '<span class="peque mono">'+fFecha(r.fecha)+'</span></div>'+
     '<div class="tit">'+escapa(r.titular||'')+'</div>'+
-    '<div class="peque mono">DNI '+escapa(r.dni||'')+
+    '<div class="peque mono">'+escapa(r.tipoDoc==='CE'?'CE':'DNI')+' '+escapa(r.dni||'')+
       (r.asesor ? ' · '+escapa(r.asesor) : '')+'</div>'+
     (r.producto ? '<div class="peque">'+escapa(r.producto)+'</div>' : '')+
-    '<div class="reg-pie">'+chipEstado(r)+evalua+
+    '<div class="reg-pie">'+selloPeriodo(r)+
+      (r.numeroPedido ? '<span class="peque mono">Pedido '+escapa(r.numeroPedido)+'</span>' : '')+
       '<span class="reg-monto mono">'+soles(r.inicial)+'</span>'+
     '</div>'+
-    (sig ? '<button class="avanzar" data-av="'+r.id+'">→ '+sig.t+'</button>' : '')+
   '</div>';
 }
 
@@ -1334,6 +1179,18 @@ function sel(lab, val, ops, attrs){
   return '<div class="campo"><label>'+lab+'</label><select '+(attrs||'')+'>'+
     ops.map(o=>'<option value="'+o[0]+'"'+((val||'')===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+
     '</select></div>';
+}
+/* Opciones del desplegable de período. Antes salían solo los cinco alrededor
+   de hoy: con la lista ordenada por período eso bastaba, pero ahora se abre
+   cualquier registro viejo, y si el suyo no estaba en la lista el desplegable
+   mostraba otro y al guardar lo movía de quincena sin avisar. El del registro
+   va siempre. */
+function opcionesPeriodo(propio){
+  const hoy = indicePeriodo(hoyUTC());
+  const ids = [...new Set([-2,-1,0,1,2].map(k=>hoy+k).concat(propio!=null?[propio]:[]))]
+              .sort((a,b)=>b-a);
+  return ids.map(i=>[String(i), 'Período '+periodo(i).numero+' · '+
+    fFecha(periodo(i).ini)+' a '+fFecha(periodo(i).fin)+(i===hoy?' (el de hoy)':'')]);
 }
 function bloqueCrediticio(rol, c){
   c = c || {puntaje:null, historial:'', deuda:'', pct:null};
@@ -1416,78 +1273,11 @@ function abrir(id){
     campo('Fecha de entrega', r.fechaEntrega, 'type="date" id="k-fentrega"')+
     '</div><div class="ayuda">Arrancan en el día del registro. Cámbialas antes de imprimir el contrato.</div></div>';
 
-  /* estados */
-  h += '<div class="bloque"><h3>Estado del registro</h3><div class="pasos">'+
-    ESTADOS.map((e,k)=>'<button class="paso'+(ORDEN.indexOf(r.estado)>=k?' hecho':'')+'" data-est="'+e.k+'">'+e.t+'<small>'+e.d+'</small></button>').join('')+
-    '</div><div class="ayuda">Toca un estado para marcarlo. Puedes retroceder si te equivocaste.</div></div>';
-
-  /* qué sigue: despacho o devolución */
-  if(r.tipo !== 'afiliacion' && (r.resultado === 'aprobado' || r.resultado === 'rechazado')){
-    const tiene = tp => r.hitos.some(x=>x.tipo===tp);
-    if(r.resultado === 'aprobado'){
-      h += '<div class="bloque"><h3>Despacho y entrega</h3><div class="pasos">'+
-        '<button class="paso'+(tiene('despachado')?' hecho':'')+'" data-hito="despachado">Despachado<small>salió de Rena Ware</small></button>'+
-        '<button class="paso'+(tiene('entregado')?' hecho':'')+'" data-hito="entregado">Entregado<small>lo recibió el cliente</small></button>'+
-        '</div><div class="ayuda">Toca para marcar o corregir la fecha y hora.</div>'+
-        (tiene('despachado') || tiene('entregado')
-          ? '<button class="btn-sec" id="btnReuso" style="margin-top:10px'+(tiene('reuso')?';border-color:var(--rojo);color:var(--rojo)':'')+'">'+
-            (tiene('reuso')?'⚠️ Marcado como reúso — el puntaje no cuenta':'↩️ Marcar reúso (el cliente no recibió)')+'</button>'
-          : '')+
-        '</div>';
-    } else {
-      h += '<div class="bloque"><h3>Devolución de la inicial</h3><div class="campos">'+
-        sel('Banco', r.devBanco, [['','—'],['BCP','BCP'],['Interbank','Interbank'],['BBVA','BBVA']], 'id="dv-banco"')+
-        campo('A nombre de', r.devTitular || r.titular, 'id="dv-titular"')+
-        campo('Número de cuenta', r.devCuenta, 'id="dv-cuenta" class="mono"')+
-        campo('CCI', r.devCci, 'id="dv-cci" class="mono"')+
-        '</div><div class="ayuda" style="margin:8px 0 12px">La cuenta debe estar a nombre del cliente. Solo BCP, Interbank o BBVA.</div>'+
-        '<div class="pasos">'+
-        '<button class="paso'+(tiene('devolucion_solicitada')?' hecho':'')+'" data-hito="devolucion_solicitada">Devolución solicitada<small>pedida a Rena Ware</small></button>'+
-        '<button class="paso'+(tiene('devolucion_hecha')?' hecho':'')+'" data-hito="devolucion_hecha">Devolución hecha<small>el dinero volvió</small></button>'+
-        '</div></div>';
-    }
-  }
-
-  /* resultado de la evaluación (crédito y contado) */
-  if(r.tipo!=='afiliacion'){
-    const res = r.resultado||'pendiente';
-    h += '<div class="bloque"><h3>Resultado de la evaluación</h3><div class="res-btns">'+
-      '<button class="res-btn obs'+(res==='observado'?' on':'')+'" data-res="observado">Observado</button>'+
-      '<button class="res-btn apr'+(res==='aprobado'?' on':'')+'" data-res="aprobado">Aprobado</button>'+
-      '<button class="res-btn rec'+(res==='rechazado'?' on':'')+'" data-res="rechazado">Rechazado</button>'+
-      '</div>';
-    if(res==='observado' || r.observaciones.length){
-      h += '<div style="margin-top:13px">';
-      r.observaciones.forEach(o=>{
-        h += '<div class="obs-item"><div class="f">'+fmtMomento(new Date(o.f).toISOString())+
-          (o.id?'<button class="obs-x" data-borraobs="'+o.id+'" title="Eliminar">✕</button>':'')+
-          '</div>'+escapa(o.t)+'</div>';
-      });
-      if(res==='observado' && r.observaciones.length){
-        const ult = r.observaciones[r.observaciones.length-1].f;
-        const vence = ult + 15*DIA, faltan = Math.round((vence - hoyUTC())/DIA);
-        h += '<div class="plazo" style="color:'+(faltan<=3?'var(--rojo)':'var(--ambar)')+'">'+
-          (faltan<0 ? 'El plazo de 15 días para subsanar venció el '+fLarga(vence)
-                    : 'Quedan '+faltan+' días para subsanar (vence el '+fLarga(vence)+')')+'</div>';
-      }
-      h += '<div class="campos" style="margin-top:12px">'+
-        campo('Analista que evalúa', r.analistaNombre, 'id="an-nom"')+
-        campo('Correo del analista', r.analistaCorreo, 'type="email" id="an-mail"')+
-        '</div>'+
-        '<button class="btn-sec" id="btnAbreObs" style="margin-top:11px">+ Agregar observación</button>'+
-        '<div id="cajaObs" class="oculto" style="margin-top:11px">'+
-          '<div class="campo ancho"><label>Nueva observación</label>'+
-          '<textarea id="obsNueva" placeholder="¿Qué observó Rena Ware y qué falta enviar?"></textarea></div>'+
-          '<div class="campos" style="margin-top:8px">'+
-          campo('Fecha y hora', new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16), 'type="datetime-local" id="obsCuando"')+
-          '<div class="campo" style="justify-content:flex-end;flex-direction:row;gap:8px">'+
-            '<button class="btn-guardar" id="btnObs" style="padding:8px 16px;font-size:13.5px">Guardar</button>'+
-            '<button class="btn-sec" id="btnCancelaObs">Cancelar</button>'+
-          '</div></div>'+
-        '</div></div>';
-    }
-    h += '</div>';
-  }
+  /* El seguimiento día a día —por revisar, ingresado, despachado, aprobado,
+     observado— se llevaba aquí y obligaba a estar todo el día actualizando.
+     La producción se mira en el portal de Rena Ware, así que el panel se queda
+     con lo suyo: los datos del pedido y los PDF. Nada se borró de la base: lo
+     que un registro viejo tenga anotado se sigue viendo, abajo. */
 
   /* 1. Cliente */
   const d = r.detalle || {};
@@ -1516,10 +1306,7 @@ function abrir(id){
       campo('Medio de pago', d.medio_pago, 'id="g-mediopago"')+
       campo('Fecha de afiliación', r.fechaContrato, 'type="date" id="k-fcontrato"')+
       campo('Ingresado por', r.registradoPor, 'readonly')+
-      sel('Período', String(r.periodo),
-          [-2,-1,0,1,2].map(k=>{ const i = indicePeriodo(hoyUTC())+k;
-            return [String(i), 'Período '+periodo(i).numero+' · '+fFecha(periodo(i).ini)+' a '+fFecha(periodo(i).fin)+(k===0?' (actual)':'')]; }),
-          'id="g-periodo"')+
+      sel('Período', String(r.periodo), opcionesPeriodo(r.periodo), 'id="g-periodo"')+
       '</div><div class="ayuda" style="margin-top:8px">La fecha de afiliación alimenta el panel del equipo. Arranca en el día del registro.</div></div>';
   } else {
 if(r.tipo !== 'afiliacion')
@@ -1552,10 +1339,7 @@ if(r.tipo !== 'afiliacion')
     campo('N° de pedido (Rena Ware)', r.numeroPedido, 'id="g-numped" class="mono"')+
     campo('Fecha en el sistema de Rena Ware', r.fechaSistema, 'type="date" id="g-fsistema"')+
     campo('Fecha del reescrito', r.fechaReescrito, 'type="date" id="g-freescrito"')+
-    sel('Período del pedido', String(r.periodo),
-        [-2,-1,0,1,2].map(k=>{ const i = indicePeriodo(hoyUTC())+k;
-          return [String(i), 'Período '+periodo(i).numero+' · '+fFecha(periodo(i).ini)+' a '+fFecha(periodo(i).fin)+(k===0?' (actual)':'')]; }),
-        'id="g-periodo"')+
+    sel('Período del pedido', String(r.periodo), opcionesPeriodo(r.periodo), 'id="g-periodo"')+
     campo('Ingresado por', r.registradoPor, 'readonly')+
     '</div></div>';
   }
@@ -1683,18 +1467,31 @@ if(r.tipo !== 'afiliacion')
     campo('Código del asesor que vende', r.asesorCodigo, 'id="k-asecod" class="mono"', {ancho:1})+
     '</div></div>';
 
-  /* línea de tiempo */
-  h += '<div class="bloque"><h3>Línea de tiempo</h3>';
-  if(!r.hitos.length){ h += '<div class="ayuda">Sin hitos todavía.</div>'; }
-  else {
-    h += '<div class="tl">' + r.hitos.map(x=>
-      '<div class="tl-item"><span class="tl-punto"></span>'+
-      '<div><b>'+(HITOS_NOMBRE[x.tipo]||x.tipo)+'</b>'+
-      '<div class="tl-fecha">'+fmtMomento(x.momento)+(x.autor?' · '+escapa(x.autor):'')+'</div>'+
-      (x.nota?'<div class="tl-nota">'+escapa(x.nota)+'</div>':'')+
-      '</div></div>').join('') + '</div>';
+  /* Seguimiento anterior. El panel llevaba estados (por revisar, ingresado,
+     procesado), evaluación (aprobado, observado) y despacho; eso se dejó de
+     usar porque la producción se mira en el portal de Rena Ware. Lo que los
+     registros viejos tengan anotado NO se borró: se muestra aquí, plegado y
+     solo cuando hay algo, para que nada quede escondido. */
+  if(r.hitos.length || r.observaciones.length){
+    h += '<details class="bloque"><summary style="cursor:pointer;font-weight:700;font-size:13.5px">'+
+      'Seguimiento anterior <span class="peque">('+(r.hitos.length+r.observaciones.length)+')</span></summary>'+
+      '<div class="ayuda" style="margin:10px 0 8px">De cuando el panel llevaba estados y evaluación. '+
+      'Se conserva tal cual; ya no se actualiza.</div>';
+    if(r.hitos.length){
+      h += '<div class="tl">' + r.hitos.map(x=>
+        '<div class="tl-item"><span class="tl-punto"></span>'+
+        '<div><b>'+(HITOS_NOMBRE[x.tipo]||x.tipo)+'</b>'+
+        '<div class="tl-fecha">'+fmtMomento(x.momento)+(x.autor?' · '+escapa(x.autor):'')+'</div>'+
+        (x.nota?'<div class="tl-nota">'+escapa(x.nota)+'</div>':'')+
+        '</div></div>').join('') + '</div>';
+    }
+    r.observaciones.forEach(o=>{
+      h += '<div class="obs-item"><div class="f">'+fmtMomento(new Date(o.f).toISOString())+'</div>'+escapa(o.t)+'</div>';
+    });
+    h += '</details>';
   }
-  h += '<div class="ayuda" style="margin-top:8px">Versión actual del pedido: <b>'+(r.version||1)+'</b>. Cada edición guarda la anterior.</div></div>';
+  h += '<div class="bloque"><div class="ayuda" style="margin:0">Versión actual del pedido: <b>'+
+       (r.version||1)+'</b>. Cada edición guarda la anterior.</div></div>';
 
   /* documentos */
   h += '<div class="bloque"><h3>Documentos</h3>'+
@@ -1766,11 +1563,12 @@ if(r.tipo !== 'afiliacion')
     h += '<div class="bloque"><h3>Vía de ingreso</h3>'+
       '<div style="margin-bottom:8px">'+pillVia(r)+'</div>'+
       '<div class="ayuda" style="margin:0 0 10px">'+escapa(v.det)+'</div>'+
-      '<label class="campo"><span>Analista de Rena Ware</span><select id="selAnalista">'+
+      '<label class="campo"><span>Analista de Rena Ware (opcional)</span><select id="selAnalista">'+
         '<option value="">— sin asignar —</option>'+
         ANALISTAS.map(a=>'<option value="'+a.id+'"'+(r.analistaId===a.id?' selected':'')+'>'+
           escapa(anNombre(a))+(a.es_jefa?' (jefa)':'')+'</option>').join('')+
       '</select></label>'+
+      '<div class="ayuda">Solo hace falta cuando el reescrito tiene que llegarle por correo.</div>'+
     '</div>';
   }
 
@@ -1844,42 +1642,6 @@ function recalcula(){
   if($('#p-total')) $('#p-total').value = total!==null ? soles(total) : '—';
 }
 function bita(r, texto){ r.bitacora.push({f:hoyUTC(), t:texto}); }
-
-/* Pasar a "visible en el sistema" exige el número que asignó Rena Ware */
-function cambiaEstado(r, nuevo){
-  if(nuevo === 'procesado'){
-    const esAfil = r.tipo === 'afiliacion';
-    const actual = esAfil ? (r.asesorCodigo||'') : (r.numeroPedido||'');
-    const v = prompt(esAfil
-      ? 'Ya está en el sistema de Rena Ware.\n\nCódigo del asesor:'
-      : 'Ya está en el sistema de Rena Ware.\n\nNúmero de pedido (el N° de contrato que asignó Rena Ware):', actual);
-    if(v === null) return;
-    if(!String(v).trim()){ alert(esAfil ? 'Hace falta el código del asesor.' : 'Hace falta el número de pedido.'); return; }
-    const campo = esAfil ? {asesor_codigo: String(v).trim()} : {numero_pedido: String(v).trim()};
-    if(!esAfil){
-      const hoyISO = new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
-      const f = prompt('¿Con qué fecha aparece en el sistema de Rena Ware?\n\nEsa fecha define el período y el puntaje extra.', r.fechaSistema || hoyISO);
-      if(f === null) return;
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(String(f).trim())){ alert('Escribe la fecha como 2026-08-23.'); return; }
-      campo.fecha_sistema = String(f).trim();
-      r.fechaSistema = campo.fecha_sistema;
-    }
-    sbPatch('registros','id=eq.'+r.id, Object.assign({estado:nuevo}, campo)).then(()=>{
-      r.estado = nuevo;
-      if(esAfil) r.asesorCodigo = String(v).trim(); else r.numeroPedido = String(v).trim();
-      r.hitos.push({tipo:'en_sistema', momento:new Date().toISOString(), nota:'', autor:''});
-      if(abierto===r.id) abrir(r.id);
-      pintaBanda(); pintaTabla();
-    }).catch(e=>alert('No se pudo guardar: '+e.message));
-    return;
-  }
-  sbPatch('registros','id=eq.'+r.id,{estado:nuevo}).then(()=>{
-    r.estado = nuevo;
-    if(nuevo==='revisado') r.hitos.push({tipo:'revisado', momento:new Date().toISOString(), nota:'', autor:''});
-    if(abierto===r.id) abrir(r.id);
-    pintaBanda(); pintaTabla();
-  }).catch(e=>alert('No se pudo guardar: '+e.message));
-}
 
 const HITOS_NOMBRE = {
   ingresado:'Ingresado por el asesor', revisado:'Revisado', en_sistema:'Visible en el sistema',
@@ -2160,7 +1922,7 @@ function guardarDetalle(){
       r.cambioModalidad = null;
     }
     else if(JSON.stringify(r)!==antes) r.bitacora.push({f:Date.now(), t:'Datos actualizados desde el panel'});
-    pintaBanda(); pintaTabla();
+    pintaTabla();
     $('#dGuardado').classList.add('on');
     setTimeout(()=>$('#dGuardado').classList.remove('on'), 1800);
     /* Se repinta la ficha con lo que quedó guardado. Así los campos calculados
@@ -2173,8 +1935,8 @@ function guardarDetalle(){
 
 /* ---------- exportar ---------- */
 function exportar(){
-  const p = periodo(vista.periodo), lista = filtrados();
-  const cab = ['ID','Fecha','Tipo','Titular','DNI','Celular','Correo','Distrito','Dirección','Asesor',
+  const lista = filtrados();
+  const cab = ['ID','Fecha','Período','N° pedido','Tipo','Titular','DNI','Celular','Correo','Distrito','Dirección','Asesor',
     'Producto','Inicial','Cuotas','Estado','Resultado','Código','Precio total','Saldo a financiar',
     'Cuota mensual','Intereses','Gastos y comisiones','Total a pagar',
     'Puntaje titular','Historial titular','Deuda titular','% impago titular',
@@ -2183,7 +1945,8 @@ function exportar(){
     const pe = r.pedido||{}, ct=(r.credito||{}).titular||{}, cc=(r.credito||{}).conyuge||{};
     const saldo = pe.precio!=null ? pe.precio-(r.inicial||0) : '';
     const total = pe.cuotaMensual!=null ? (r.inicial||0)+pe.cuotaMensual*(r.cuotas||0) : '';
-    return [r.id, fISO(r.fecha), TIPOS[r.tipo], r.titular, r.dni, r.celular, r.correo, r.distrito, r.direccion,
+    return [r.id, fISO(r.fecha), r.periodo!=null?periodo(r.periodo).numero:'', r.numeroPedido||'',
+      TIPOS[r.tipo], r.titular, r.dni, r.celular, r.correo, r.distrito, r.direccion,
       r.asesor, r.producto, r.inicial, r.cuotas||'', (ESTADOS.find(e=>e.k===r.estado)||{}).t, r.resultado||'',
       pe.codigo||'', pe.precio??'', saldo, pe.cuotaMensual??'', pe.intereses??'', pe.gastos??'', total,
       ct.puntaje??'', ct.historial||'', ct.deuda||'', ct.pct??'',
@@ -2194,13 +1957,15 @@ function exportar(){
   const csv = '\uFEFF'+[cab, ...lista.map(fila)].map(f=>f.map(esc).join(';')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
-  a.download = 'registros-periodo-'+p.numero+'-'+p.ciclo+'.csv';
+  /* El Excel sale de lo que está en pantalla: si hay un período elegido lo
+     dice el nombre, y si no, son todos. */
+  a.download = vista.periodo!=null
+    ? 'registros-periodo-'+periodo(vista.periodo).numero+'-'+periodo(vista.periodo).ciclo+'.csv'
+    : 'registros-'+fISO(Date.now())+'.csv';
   document.body.appendChild(a); a.click(); a.remove();
 }
 
 /* ---------- eventos ---------- */
-$('#pAnt').addEventListener('click', ()=>{ vista.periodo--; abierto=null; cerrar(); cargarPeriodo(); });
-$('#pSig').addEventListener('click', ()=>{ if(vista.periodo<indicePeriodo(hoyUTC())){ vista.periodo++; cerrar(); cargarPeriodo(); } });
 $('#filtros').addEventListener('click', e=>{
   const b = e.target.closest('.fchip'); if(!b) return;
   const f = b.dataset.f;
@@ -2208,7 +1973,10 @@ $('#filtros').addEventListener('click', e=>{
   b.classList.add('on'); vista[f] = b.dataset.v; pintaTabla();
 });
 $('#fAsesor').addEventListener('change', e=>{ vista.asesor = e.target.value; pintaTabla(); });
-$('#fResultado').addEventListener('change', e=>{ vista.resultado = e.target.value; pintaTabla(); });
+$('#fPeriodo').addEventListener('change', e=>{
+  vista.periodo = e.target.value === '' ? null : +e.target.value;
+  pintaTabla();
+});
 $('#q').addEventListener('input', e=>{ vista.q = e.target.value; pintaTabla(); });
 $('#btnExcel').addEventListener('click', exportar);
 
@@ -2400,20 +2168,12 @@ $('#dBorrar').addEventListener('click', async ()=>{
     const resp = await fetch(SB_URL+'/rest/v1/registros?id=eq.'+r.id, {method:'DELETE', headers:cab({Prefer:'return=minimal'})});
     if(!resp.ok) throw new Error(await resp.text());
     DATOS = DATOS.filter(x=>x.id!==r.id);
-    cerrar(); pintaBanda(); pintaTabla();
+    cerrar(); pintaTabla();
   }catch(e){ alert('No se pudo eliminar: '+String(e.message||e).slice(0,140)); }
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && abierto) cerrar(); });
 
 $('#tabla').addEventListener('click', e=>{
-  const av = e.target.closest('[data-av]');
-  if(av){
-    e.stopPropagation();
-    const r = DATOS.find(x=>x.id===av.dataset.av);
-    const i = ORDEN.indexOf(r.estado);
-    if(i < ORDEN.length-1) cambiaEstado(r, ORDEN[i+1]);
-    return;
-  }
   /* Vale para la fila de la tabla y para la tarjeta del celular */
   const fila = e.target.closest('[data-id]');
   if(fila) abrir(fila.dataset.id);
@@ -2421,94 +2181,6 @@ $('#tabla').addEventListener('click', e=>{
 
 $('#dCuerpo').addEventListener('click', e=>{
   const r = DATOS.find(x=>x.id===abierto); if(!r) return;
-  const paso = e.target.closest('[data-est]');
-  if(paso){ cambiaEstado(r, paso.dataset.est); return; }
-  const res = e.target.closest('[data-res]');
-  if(res){
-    const nuevo = res.dataset.res;
-    sbPatch('registros','id=eq.'+r.id,{resultado:nuevo}).then(()=>{
-      r.resultado = nuevo; r.bitacora.push({f:Date.now(), t:'Resultado del crédito: '+nuevo});
-      abrir(r.id); pintaTabla();
-    }).catch(e=>alert('No se pudo guardar: '+e.message));
-    return;
-  }
-  if(e.target.id==='btnReuso'){
-    const ya = r.hitos.some(x=>x.tipo==='reuso');
-    if(ya){
-      if(!confirm('¿Quitar el reúso? El puntaje volverá a contar.')) return;
-      fetch(SB_URL+'/rest/v1/hitos?registro_id=eq.'+r.id+'&tipo=eq.reuso',
-        {method:'DELETE', headers:cab({Prefer:'return=minimal'})})
-        .then(()=>{ r.hitos = r.hitos.filter(x=>x.tipo!=='reuso'); abrir(r.id); })
-        .catch(()=>alert('No se pudo quitar el reúso.'));
-      return;
-    }
-    const hoyL = new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
-    const cuando = prompt('El cliente no recibió la mercadería.\n\n¿Cuándo se supo? (2026-08-23 14:30)', hoyL.replace('T',' '));
-    if(cuando === null) return;
-    const iso = new Date(String(cuando).trim().replace(' ','T')).toISOString();
-    if(isNaN(Date.parse(iso))){ alert('No entendí esa fecha.'); return; }
-    const nota = prompt('¿Por qué? (opcional)','') || '';
-    ponHito(r,'reuso', iso, nota).then(()=>abrir(r.id))
-      .catch(e=>alert('No se pudo marcar: '+String(e.message||e).slice(0,120)));
-    return;
-  }
-  if(e.target.id==='btnAbreObs'){ $('#cajaObs').classList.remove('oculto'); e.target.classList.add('oculto'); $('#obsNueva').focus(); return; }
-  if(e.target.id==='btnCancelaObs'){ $('#cajaObs').classList.add('oculto'); $('#btnAbreObs').classList.remove('oculto'); return; }
-  const borra = e.target.closest('[data-borraobs]');
-  if(borra){
-    if(!confirm('¿Eliminar esta observación?')) return;
-    const oid = borra.dataset.borraobs;
-    fetch(SB_URL+'/rest/v1/observaciones?id=eq.'+oid, {method:'DELETE', headers:cab({Prefer:'return=minimal'})})
-      .then(resp=>{ if(!resp.ok) throw new Error('no se pudo');
-        r.observaciones = r.observaciones.filter(x=>x.id!==oid); abrir(r.id); })
-      .catch(()=>alert('No se pudo eliminar la observación.'));
-    return;
-  }
-  if(e.target.id==='btnObs'){
-    const txt = ($('#obsNueva').value||'').trim();
-    if(!txt){ $('#obsNueva').focus(); return; }
-    const cuando = ($('#obsCuando')||{}).value;
-    const iso = cuando ? new Date(cuando).toISOString() : new Date().toISOString();
-    const tareas = [ sbPost('observaciones',
-      {registro_id:r.id, texto:txt, momento:iso, fecha:iso.slice(0,10)}) ];
-    const an = ($('#an-nom')||{}).value, am = ($('#an-mail')||{}).value;
-    if((an||'')!==r.analistaNombre || (am||'')!==r.analistaCorreo)
-      tareas.push(sbPatch('registros','id=eq.'+r.id,{analista_nombre:an||null, analista_correo:am||null}));
-    Promise.all(tareas).then(async ()=>{
-      r.observaciones.push({f:Date.parse(iso), t:txt});
-      r.analistaNombre = an||''; r.analistaCorreo = am||'';
-      try{ await ponHito(r,'observado', iso, txt.slice(0,120)); }catch(x){}
-      abrir(r.id);
-    }).catch(e=>alert('No se pudo guardar: '+e.message));
-    return;
-  }
-  const hito = e.target.closest('[data-hito]');
-  if(hito){
-    const tipo = hito.dataset.hito;
-    const previo = r.hitos.find(x=>x.tipo===tipo);
-    const sug = previo ? previo.momento : new Date().toISOString();
-    const local = new Date(Date.parse(sug) - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
-    const cuando = prompt((previo?'Corregir la fecha y hora de "':'¿Cuándo ocurrió "')+
-      (HITOS_NOMBRE[tipo]||tipo)+'"?\n\nFormato: 2026-08-23 14:30', local.replace('T',' '));
-    if(cuando === null) return;
-    const iso = new Date(String(cuando).trim().replace(' ','T')).toISOString();
-    if(iso === 'Invalid Date' || isNaN(Date.parse(iso))){ alert('No entendí esa fecha. Usa 2026-08-23 14:30'); return; }
-    const tareas = [];
-    if(tipo.startsWith('devolucion')){
-      const banco = ($('#dv-banco')||{}).value, cta = ($('#dv-cuenta')||{}).value,
-            cci = ($('#dv-cci')||{}).value, tit = ($('#dv-titular')||{}).value;
-      if(tipo==='devolucion_solicitada' && (!banco || !cta)){
-        alert('Para solicitar la devolución hace falta el banco y el número de cuenta.'); return;
-      }
-      tareas.push(sbPatch('registros','id=eq.'+r.id,
-        {dev_banco:banco||null, dev_cuenta:cta||null, dev_cci:cci||null, dev_titular:tit||null}));
-      r.devBanco=banco; r.devCuenta=cta; r.devCci=cci; r.devTitular=tit;
-    }
-    Promise.all(tareas).then(()=>ponHito(r, tipo, iso, ''))
-      .then(()=>abrir(r.id))
-      .catch(e=>alert('No se pudo guardar: '+String(e.message||e).slice(0,140)));
-    return;
-  }
   if(e.target.id==='btnDoc'){ $('#fileDoc').click(); return; }
   if(e.target.id==='btnZipRw'){ exportarZipRw(r); return; }
   if(e.target.id==='btnJsonRw'){ verJsonRw(r); return; }
@@ -2583,7 +2255,6 @@ $('#lgBtn').addEventListener('click', async ()=>{
 });
 $('#lgPass').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#lgBtn').click(); });
 
-pintaBanda();
 if(SB_TOKEN){
   sbGet('registros?select=id&limit=1')
     .then(()=>iniciar())

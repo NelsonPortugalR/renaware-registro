@@ -628,6 +628,35 @@ function validaDni(v){
   if(limpio.length!==8) return {ok:false, msg:'Mmm, el DNI debe tener exactamente <b>8 números</b>. Revísalo y vuelve a escribirlo, por favor 🙏'};
   return {ok:true, v:limpio};
 }
+/* Fecha de nacimiento. Se escribe como viene del sistema de Rena Ware —ocho
+   números seguidos— y también se aceptan los separadores que salgan solos.
+   Queda guardada en DD/MM/AAAA, que es como se lee; a ISO se convierte recién
+   al enviar, porque la base la recibe como fecha. */
+function validaNacimiento(v){
+  const bruto = String(v).trim();
+  const n = bruto.replace(/\D/g,'');
+  let p = null;
+  if(/^\d{8}$/.test(n)) p = [n.slice(0,2), n.slice(2,4), n.slice(4)];
+  else{
+    const m = bruto.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+    if(m) p = [m[1], m[2], m[3]];
+  }
+  if(!p) return {ok:false, msg:'Escríbela como <b>24081985</b> (día, mes y año seguidos) o <b>24/08/1985</b> 🙏'};
+  const d=+p[0], mes=+p[1], a=+p[2];
+  if(mes<1 || mes>12) return {ok:false, msg:'Ese mes no existe. Recuerda: primero el <b>día</b>, después el mes 🙏'};
+  const f = new Date(Date.UTC(a, mes-1, d));
+  if(f.getUTCFullYear()!==a || f.getUTCMonth()!==mes-1 || f.getUTCDate()!==d)
+    return {ok:false, msg:'Esa fecha no existe en el calendario. Revísala, por favor 🙏'};
+  const anios = (Date.now() - f.getTime()) / (365.25*24*3600*1000);
+  if(anios < 18) return {ok:false, msg:'Esa fecha da <b>menos de 18 años</b>. Revísala, por favor 🙏'};
+  if(anios > 100) return {ok:false, msg:'Esa fecha da más de <b>100 años</b>. Revísala, por favor 🙏'};
+  return {ok:true, v: String(d).padStart(2,'0')+'/'+String(mes).padStart(2,'0')+'/'+a};
+}
+/* DD/MM/AAAA → AAAA-MM-DD, que es lo que entiende la base. */
+function nacimientoISO(){
+  const m = String(datos.nacimiento||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? m[3]+'-'+m[2]+'-'+m[1] : null;
+}
 function validaCelular(v){
   let limpio = v.replace(/\D/g,'');
   if(limpio.startsWith('51') && limpio.length===11) limpio = limpio.slice(2);
@@ -694,11 +723,11 @@ const PASOS = {
       datos.esPropio = (v==='mio');
       burbujaUser(v==='mio' ? 'Es mi afiliado' : 'Es de otro asesor');
       if(datos.esPropio){
-        cola = ['nombrePropio','nombreAfiliado','tipoDocumento','afiDni','afiCelular','afiCorreo','ubicacion','direccion','pago','foto','resumen'];
-        totalPasos = 12;
-      }else{
-        cola = ['asesorDueno','nombreAfiliado','tipoDocumento','afiDni','afiCelular','afiCorreo','ubicacion','direccion','pago','foto','resumen'];
+        cola = ['nombrePropio','nombreAfiliado','tipoDocumento','afiDni','afiNacimiento','afiCelular','afiCorreo','ubicacion','direccion','pago','foto','resumen'];
         totalPasos = 13;
+      }else{
+        cola = ['asesorDueno','nombreAfiliado','tipoDocumento','afiDni','afiNacimiento','afiCelular','afiCorreo','ubicacion','direccion','pago','foto','resumen'];
+        totalPasos = 14;
       }
       avanzar();
     }
@@ -735,6 +764,21 @@ const PASOS = {
       return validaDni(v);
     },
     guarda(v){ datos.dni=v; }
+  },
+  /* La fecha de nacimiento sale en el sistema de Rena Ware al afiliar, así que
+     es el momento en que se tiene a la mano. Es opcional a propósito: de la
+     mayoría todavía no se sabe, y nadie debería trabarse aquí. Se guarda en
+     ISO porque el disparador de la base la lee como fecha, no como texto. */
+  afiNacimiento:{
+    tipo:'texto', inputmode:'numeric', placeholder:'Ej.: 24081985', maxlength:10,
+    get valor(){ return datos.nacimiento || null; },   // al corregir, trae la que ya había
+    pregunta:()=>'¿<b>Fecha de nacimiento</b> de '+nObj()+'?'+
+      '<span class="peque">Día, mes y año seguidos: 24081985. Si no la tienes a la mano, puedes omitirla.</span>',
+    valida(v){ return validaNacimiento(v); },
+    guarda(v){ datos.nacimiento = v; },
+    omitirTxt:'⏭️ No la tengo',
+    omitir:()=>{ datos.nacimiento='';
+      if(editando){ editando=false; irResumen(); } else { avanzar(); } }
   },
   afiCelular:{
     tipo:'texto', inputmode:'tel', placeholder:'9 dígitos, empieza con 9',
@@ -3283,6 +3327,7 @@ async function irResumenAfiliado(){
   }
   html += fila('Afiliado', datos.nombreAfiliado);
   html += '<div class="res-grid">'+fila(etiquetaDoc(), datos.dni)+fila('Celular', datos.celular)+'</div>';
+  if(datos.nacimiento) html += fila('Fecha de nacimiento', datos.nacimiento);
   html += fila('Correo', datos.email);
   html += fila('Ubicación', datos.distrito+' · '+datos.provincia+' · '+datos.departamento);
   html += fila('Dirección', datos.direccion);
@@ -3427,6 +3472,8 @@ function catalogoDatos(){
     }
     L.push({t:'Nombre del afiliado', v:vSi(datos.nombreAfiliado), fn:()=>editaTexto('nombreAfiliado')});
     L.push({t:'DNI',      v:vSi(datos.dni),     fn:()=>editaTexto('afiDni')});
+    L.push({t:'Nacimiento', v:datos.nacimiento || '— sin llenar (opcional)',
+            fn:()=>editaTexto('afiNacimiento')});
     L.push({t:'Celular',  v:vSi(datos.celular), fn:()=>editaTexto('afiCelular')});
     L.push({t:'Correo',   v:vSi(datos.email),   fn:()=>editaTexto('afiCorreo')});
     L.push({t:'Dirección', v:vVivienda(), fn:()=>{ editandoDireccion=true;
@@ -3594,6 +3641,9 @@ async function enviarAfiliado(){
     registrado_por: datos.registradoPor,
     nombre_afiliado: datos.nombreAfiliado,
     dni: datos.dni, celular: datos.celular, email: datos.email,
+    /* En ISO: el disparador que da de alta al asesor la lee como fecha y, si
+       no puede, la deja en blanco sin avisar. */
+    nacimiento: nacimientoISO(),
     departamento: datos.departamento, provincia: datos.provincia,
     distrito: datos.distrito, direccion: datos.direccion,
     /* Las afiliaciones guardaban esto como "metodo_pago" y las ventas como

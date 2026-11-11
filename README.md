@@ -104,6 +104,17 @@ afiliaciones incluidas) y ofrece usar sus datos. Al aceptar **no se salta hasta
 el pedido**: sigue el orden normal y cada pregunta ofrece su dato para
 confirmarlo de un toque o cambiarlo.
 
+**La fecha de nacimiento se pide al afiliar**, que es cuando está a la vista en
+el sistema de Rena Ware, justo después del documento. Es **opcional** —de la
+mayoría todavía no se sabe y nadie debería trabarse ahí—, se escribe como viene
+(`24081985`, o con barras) y queda guardada en `eq_personas.nacimiento`, que es
+la columna que el panel de asesores ya mostraba vacía. El camino es el
+disparador `alta_asesor_desde_afiliacion`, que lee `detalle->>'nacimiento'`
+**como fecha**: por eso el formulario la manda en ISO (`nacimientoISO()`) aunque
+la muestre en DD/MM/AAAA. Si el formato no calza, el disparador la deja en
+blanco sin avisar. En el panel de asesores se edita a mano y el filtro «Sin
+fecha de nacimiento» muestra a quiénes les falta.
+
 Un afiliado nuevo queda disponible en los tres lados el mismo día: en
 `clientes` y en el buscador de clientes (lo hace `engancha_cliente`, que corre
 para todo registro), y en la base de asesores con su ficha llena
@@ -111,6 +122,49 @@ para todo registro), y en la base de asesores con su ficha llena
 **completa los campos en blanco** y no pisa ninguno cargado; el candado contra
 duplicados mira nombre, código y DNI, porque «Helen Coska» y «HELEN KOSKA» son
 la misma señora.
+
+## Para qué sirve el panel (y para qué dejó de servir)
+
+El panel hace dos cosas: **genera los PDF** (contrato, reescrito, ficha) y
+**guarda la información estructurada** para el próximo ingreso y para cargarla
+al portal de Rena Ware. No es un sistema de seguimiento.
+
+Lo tuvo: un flujo de estados (por revisar → revisado → ingresado → procesado),
+la evaluación crediticia (aprobado, observado, rechazado con su plazo de 15
+días), el despacho y la devolución de la inicial. Obligaba a estar todo el día
+actualizándolo y existía para saber la producción, que ahora se mira
+directamente en el portal de Rena Ware. Se quitó de la vista en noviembre de
+2026.
+
+**No se borró nada.** Las columnas `estado` y `resultado` y las tablas `hitos`
+y `observaciones` siguen en la base con todo lo que tenían, el Excel las sigue
+exportando, y en la ficha de un registro que tenga algo anotado aparece un
+bloque plegado, «Seguimiento anterior», con su línea de tiempo y sus
+observaciones. Si alguna vez hace falta volver a llevarlo, la data está.
+
+Lo único que se conservó vivo es el **analista de Rena Ware**, en el bloque
+«Vía de ingreso»: es opcional y sirve para que el reescrito le llegue por
+correo.
+
+## Buscar un pedido, no recordar su período
+
+El panel se organizaba por quincena: para encontrar un pedido —por ejemplo para
+hacerle un reescrito— había que acordarse de en cuál se ingresó. Ahora la lista
+son **todos los registros**, del más nuevo al más viejo, y el buscador es la
+puerta de entrada: encuentra por nombre, apellido, DNI, **número de pedido**,
+código del registro, asesor, producto, celular, correo o distrito, con las
+palabras en cualquier orden.
+
+El período no desapareció: va como sello (`P23`) en cada fila y como un filtro
+más al lado del asesor, con los períodos que de verdad tienen registros. En la
+ficha se sigue pudiendo cambiar el período de un pedido, y el desplegable
+**incluye siempre el período propio del registro**: antes ofrecía solo los cinco
+alrededor de hoy, así que abrir un pedido viejo mostraba otro período y guardar
+lo movía de quincena sin avisar.
+
+Se cargan todos los registros de una vez (son unos cientos) y el filtrado ocurre
+en el navegador. Si algún día son miles, el sitio donde paginar es
+`cargarPeriodo()`.
 
 ## Pasar una venta de crédito a contado
 
