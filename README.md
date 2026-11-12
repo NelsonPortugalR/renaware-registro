@@ -188,6 +188,33 @@ precio en su casilla y CRÉDITO vacío. Al volver a crédito reaparece el campo 
 cuotas y la evaluación vuelve a `pendiente`. En los dos sentidos queda anotado
 en la bitácora del registro, porque un reescrito tiene que poder explicarse.
 
+## Cumpleaños del equipo
+
+En **Asesores** hay dos pestañas: la **Base** de siempre y **🎂 Cumpleaños**.
+La segunda sirve para dos cosas distintas y por eso es una sola lista ordenada
+por día: saludar a cada quien el día que cumple, y una vez al mes celebrar a
+todos los del mes.
+
+En el mes de hoy la lista se parte en **Hoy · Lo que viene · Ya pasaron**, con
+el de hoy resaltado; en cualquier otro mes va de corrido. Cada fila trae el día,
+los años que cumple, el código, la zona y un botón **Saludar** que abre WhatsApp
+con el mensaje ya escrito (solo si el celular es un 9 de nueve dígitos). El
+botón **Copiar la lista del mes** la deja en texto para pegarla en el grupo.
+
+La etiqueta **NUEVO** pide dos condiciones: que la ficha venga de una
+**afiliación** y que tenga menos de 90 días. Las dos, a propósito: la mayoría de
+las fichas entró por carga masiva de la lista de Rena Ware, y ahí `ingreso_fecha`
+es el día en que se subió el archivo, no el día en que la persona entró al
+equipo. Mirando solo la fecha, una carga marcaba de golpe 30 de los 36 del mes
+y la etiqueta no distinguía nada.
+
+Quien no tiene `nacimiento` no aparece en ningún mes: el pie de la pestaña dice
+cuántos son y manda al filtro «Sin fecha de nacimiento» de la Base. Las fechas
+se leen partiendo el texto `AAAA-MM-DD`, nunca con `new Date()`: eso las
+interpreta en UTC y en Lima retrocede un día, así que un cumpleaños del 1 salía
+el último del mes anterior. Un 29 de febrero se muestra tal cual en los años no
+bisiestos; no se construye ninguna fecha con él, así que no revienta.
+
 ## El panel desde el celular
 
 El panel se usa tanto desde el teléfono como desde la laptop, así que las dos

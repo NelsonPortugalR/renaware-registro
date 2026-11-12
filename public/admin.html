@@ -141,6 +141,61 @@
 
   .ayuda{font-size:12.5px;color:var(--suave);margin-top:9px;line-height:1.4}
 
+  /* ---------- pestañas del modal de asesores ---------- */
+  .pestanas{display:flex;gap:6px;padding:12px 20px 0;border-bottom:1px solid var(--linea);
+    background:var(--superficie)}
+  .pest{background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;
+    font-size:14px;font-weight:700;color:var(--suave);cursor:pointer;border-radius:8px 8px 0 0}
+  .pest:hover{color:var(--tinta);background:var(--linea2)}
+  .pest.on{color:var(--acero);border-bottom-color:var(--acero)}
+  .oculto{display:none !important}
+
+  /* ---------- cumpleaños ---------- */
+  .cum-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 10px}
+  .cum-nav .sp{flex:1}
+  .cum-mes{font-family:'Bitter',serif;font-size:19px;font-weight:700;letter-spacing:-.01em;
+    min-width:170px;text-align:center}
+  .cum-grupo{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--suave);margin:14px 0 7px;padding:0 10px 4px;border-bottom:1px solid var(--linea)}
+  .cum-grupo:first-child{margin-top:0}
+  .cum-fila{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:10px}
+  .cum-fila+.cum-fila{margin-top:3px}
+  .cum-fila:hover{background:var(--linea2)}
+  .cum-fila.pasado{opacity:.5}
+  .cum-fila.hoy{background:var(--ambar-f);box-shadow:inset 0 0 0 1.5px var(--ambar)}
+  .cum-dia{flex:0 0 46px;text-align:center;border-radius:9px;background:var(--linea2);
+    border:1px solid var(--linea);padding:4px 0;line-height:1.1}
+  .cum-dia b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+  .cum-dia span{display:block;font-size:10px;color:var(--suave);text-transform:uppercase;
+    letter-spacing:.04em}
+  .cum-fila.hoy .cum-dia{background:var(--ambar);border-color:var(--ambar);color:#fff}
+  .cum-fila.hoy .cum-dia span{color:rgba(255,255,255,.85)}
+  .cum-quien{flex:1;min-width:0}
+  .cum-nom{font-weight:700;font-size:14.5px}
+  .cum-sub{font-size:12px;color:var(--suave);margin-top:1px}
+  .cum-nuevo{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+    background:var(--verde,#0C7461);color:#fff;border-radius:99px;padding:2px 8px;margin-left:7px;
+    vertical-align:1px}
+  .cum-wa{flex:0 0 auto;text-decoration:none;font-size:12.5px;font-weight:700;
+    border:1.5px solid var(--linea);border-radius:99px;padding:7px 13px;color:var(--acero);
+    background:var(--superficie);white-space:nowrap}
+  .cum-wa:hover{border-color:var(--acero);background:var(--linea2)}
+  .cum-sincel{flex:0 0 auto;font-size:12px;color:var(--suave);white-space:nowrap}
+  @media (max-width: 640px){
+    .cum-fila{flex-wrap:wrap}
+    .cum-quien{flex:1 1 60%}
+    .cum-wa,.cum-sincel{flex:1 1 100%;text-align:center;margin-top:6px}
+    /* El mes y sus flechas, en una fila propia: apretados contra el botón de
+       copiar, el título se partía en dos y se montaba sobre las flechas. */
+    .cum-mes{flex:1;min-width:0;font-size:17px}
+    .cum-nav{gap:6px}
+    .cum-nav .sp{display:none}
+    #cumCopiar{flex:1 1 100%;order:9}
+    /* La pantalla entera ya scrollea: un scroll dentro de otro deja la lista
+       cortada y el pie encima. */
+    #cumCuerpo{max-height:none !important}
+  }
+
   /* El período ya no manda en la vista: va como sello en cada registro */
   .per-tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--acero2);
     background:var(--linea2);border:1px solid var(--linea);border-radius:99px;
@@ -434,10 +489,14 @@
       <h2>Asesores del equipo</h2>
       <button class="cerrar" id="asCerrar">✕</button>
     </div>
+    <div class="pestanas" id="asPestanas">
+      <button class="pest on" data-vista="base">Base</button>
+      <button class="pest" data-vista="cumple">🎂 Cumpleaños</button>
+    </div>
     <!-- En el celular este bloque es uno solo que scrollea: la explicación y
          los filtros se van hacia arriba y la lista se queda con la pantalla.
          En la laptop, display:contents lo deja tal como estaba. -->
-    <div class="modal-scroll">
+    <div class="modal-scroll" id="asVistaBase">
     <div class="modal-ayuda">La base que alimenta el buscador del formulario. Escribe para filtrar por
     nombre, código, distrito o correo: las palabras pueden ir en cualquier orden.
     <details class="ayuda-mas"><summary>Cómo funciona el código</summary>
@@ -466,6 +525,22 @@
     <div id="asResumen" class="ayuda" style="margin-bottom:8px"></div>
     <div id="asCuerpo" style="max-height:55vh;overflow:auto"></div>
     </div>
+
+    <!-- ===== Cumpleaños del mes ===== -->
+    <div class="modal-scroll oculto" id="asVistaCumple">
+      <div class="cum-nav">
+        <button class="btn-mini" id="cumAnt" title="Mes anterior">‹</button>
+        <div class="cum-mes"><span id="cumMes">—</span></div>
+        <button class="btn-mini" id="cumSig" title="Mes siguiente">›</button>
+        <button class="btn-mini" id="cumHoy">Este mes</button>
+        <div class="sp"></div>
+        <button class="btn-sec" id="cumCopiar">Copiar la lista del mes</button>
+      </div>
+      <div id="cumResumen" class="ayuda" style="margin:0 0 10px"></div>
+      <div id="cumCuerpo" style="max-height:52vh;overflow:auto;padding-bottom:6px"></div>
+      <div id="cumPie" class="as-pie"></div>
+    </div>
+
     <div class="modal-pie">
       <button class="btn-sec" id="asAgregar">Agregar asesor</button>
       <button class="btn-pri" id="asGuardar">Guardar cambios</button>
@@ -2032,6 +2107,37 @@ $('#asCerrar').addEventListener('click', ()=>$('#modalAsesores').classList.remov
 $('#modalAsesores').addEventListener('click', e=>{ if(e.target.id==='modalAsesores') $('#modalAsesores').classList.remove('on'); });
 $('#asBuscar').addEventListener('input', ()=>{ clearTimeout(window._asT); window._asT=setTimeout(asPinta,200); });
 $('#asFiltro').addEventListener('change', asPinta);
+
+/* ---------- pestañas y cumpleaños ---------- */
+$('#asPestanas').addEventListener('click', e=>{
+  const b = e.target.closest('.pest'); if(!b) return;
+  document.querySelectorAll('#asPestanas .pest').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const cumple = b.dataset.vista === 'cumple';
+  $('#asVistaBase').classList.toggle('oculto', cumple);
+  $('#asVistaCumple').classList.toggle('oculto', !cumple);
+  /* El pie de «Agregar / Guardar» es de la base: en cumpleaños estorba */
+  $('#asAgregar').classList.toggle('oculto', cumple);
+  $('#asGuardar').classList.toggle('oculto', cumple);
+  if(cumple) cumPinta();
+});
+function cumMueve(n){
+  if(!cumVista) cumVista = cumMesActual();
+  const t = new Date(Date.UTC(cumVista.a, cumVista.m + n, 1));
+  cumVista = {a:t.getUTCFullYear(), m:t.getUTCMonth()};
+  cumPinta();
+}
+$('#cumAnt').addEventListener('click', ()=>cumMueve(-1));
+$('#cumSig').addEventListener('click', ()=>cumMueve(1));
+$('#cumHoy').addEventListener('click', ()=>{ cumVista = cumMesActual(); cumPinta(); });
+$('#cumCopiar').addEventListener('click', e=>{
+  const txt = cumTexto();
+  const listo = ()=>{ e.target.textContent='Copiado ✓';
+    setTimeout(()=>{ e.target.textContent='Copiar la lista del mes'; }, 1600); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(listo).catch(()=>alert(txt));
+  } else { alert(txt); }
+});
 $('#asGuardar').addEventListener('click', asGuarda);
 $('#asAgregar').addEventListener('click', ()=>{
   /* Antes esto eran dos prompts seguidos, incómodos en el celular y sin
@@ -2957,7 +3063,7 @@ async function abrirAsesores(){
   $('#modalAsesores').classList.add('on');
   $('#asCuerpo').innerHTML = '<div style="padding:20px;color:var(--suave)">Cargando…</div>';
   try{
-    EQ_LISTA = await sbGet('eq_personas?select=id,nombre,codigo_asesor,dni,nacimiento,ruc,celular,correo,distrito,provincia,departamento,ingreso_fecha,patrocinador_id,activo&order=nombre&limit=2000');
+    EQ_LISTA = await sbGet('eq_personas?select=id,nombre,codigo_asesor,dni,nacimiento,ruc,celular,correo,distrito,provincia,departamento,ingreso_fecha,patrocinador_id,activo,origen&order=nombre&limit=2000');
     AS_SUCIOS.clear();
     /* ventas asociadas, para saber a quién no conviene tocar */
     AS_VENTAS = {};
@@ -2966,6 +3072,8 @@ async function abrirAsesores(){
       rs.forEach(x=>{ const k = rwNorm(x.asesor); if(k) AS_VENTAS[k] = (AS_VENTAS[k]||0)+1; });
     }catch(e){}
     asPinta();
+    /* Si quedó abierta la pestaña de cumpleaños, se repinta con lo recién traído */
+    if(!$('#asVistaCumple').classList.contains('oculto')) cumPinta();
   }catch(err){
     $('#asCuerpo').innerHTML = '<div style="padding:20px;color:var(--rojo)">No se pudo cargar: '+escapa(String(err.message||err))+'</div>';
   }
@@ -3120,11 +3228,137 @@ function asFicha(a, info){
 if(window.matchMedia){
   const mq = window.matchMedia('(max-width:640px)');
   const alCambiar = ()=>{
-    if(document.getElementById('modalAsesores').classList.contains('on')) asPinta();
+    if(document.getElementById('modalAsesores').classList.contains('on')){
+      asPinta();
+      const vc = document.getElementById('asVistaCumple');
+      if(vc && !vc.classList.contains('oculto')) cumPinta();
+    }
     if(typeof DATOS !== 'undefined' && DATOS.length) pintaTabla();
   };
   if(mq.addEventListener) mq.addEventListener('change', alCambiar);
   else if(mq.addListener) mq.addListener(alCambiar);
+}
+
+/* ============================================================
+   CUMPLEAÑOS DEL MES
+   Dos usos distintos, por eso una sola lista ordenada por día: saludar a cada
+   quien el día que cumple, y una vez al mes celebrar a todos los del mes.
+   ============================================================ */
+const MES_LARGO = ['enero','febrero','marzo','abril','mayo','junio','julio',
+                   'agosto','setiembre','octubre','noviembre','diciembre'];
+/* «Nuevo» es quien se afilió hace poco: en la celebración del mes es a quien
+   además se le da la bienvenida. Pide las dos cosas —afiliación y 90 días—
+   a propósito: la mayoría de las fichas entró por carga masiva de la lista de
+   Rena Ware, y su «ingreso» es el día en que se subió el archivo, no el día en
+   que la persona entró al equipo. Mirando solo la fecha, una carga marcaba de
+   golpe a 30 de los 36 del mes y la etiqueta no distinguía nada. */
+const DIAS_NUEVO = 90;
+let cumVista = null;   // {a:año, m:mes 0-11}
+
+/* La fecha viene como texto 'AAAA-MM-DD'. Pasarla por new Date() la lee en UTC
+   y en Lima retrocede un día: un cumpleaños del 1 aparecía el último del mes
+   anterior. Se parte el texto y listo. */
+function partesFecha(iso){
+  const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? {a:+m[1], m:+m[2]-1, d:+m[3]} : null;
+}
+function cumMesActual(){ const h = new Date(hoyUTC()); return {a:h.getUTCFullYear(), m:h.getUTCMonth()}; }
+function cumEdadQueCumple(nac, anio){ const p = partesFecha(nac); return p ? anio - p.a : null; }
+function esNuevoAsesor(a){
+  if(a.origen !== 'afiliacion') return false;
+  const p = partesFecha(a.ingreso_fecha); if(!p) return false;
+  return (hoyUTC() - Date.UTC(p.a, p.m, p.d)) <= DIAS_NUEVO*DIA;
+}
+/* Celular peruano a enlace de WhatsApp, con el saludo ya escrito para que sea
+   un toque. El texto se puede cambiar antes de enviar, como cualquier mensaje. */
+function cumEnlaceWa(a){
+  const cel = String(a.celular||'').replace(/\D/g,'');
+  if(!/^9\d{8}$/.test(cel)) return null;
+  const nombre = String(a.nombre||'').trim().split(/\s+/)[0] || '';
+  const saludo = '¡Feliz cumpleaños, '+nombre.charAt(0)+nombre.slice(1).toLowerCase()+'! 🎉';
+  return 'https://wa.me/51'+cel+'?text='+encodeURIComponent(saludo);
+}
+function cumDelMes(v){
+  return EQ_LISTA.filter(a=>{
+    if(a.activo === false) return false;
+    const p = partesFecha(a.nacimiento);
+    return p && p.m === v.m;
+  }).map(a=>{
+    const p = partesFecha(a.nacimiento);
+    return {a, dia:p.d, cumple:cumEdadQueCumple(a.nacimiento, v.a), nuevo:esNuevoAsesor(a)};
+  }).sort((x,y)=> x.dia - y.dia || String(x.a.nombre).localeCompare(String(y.a.nombre)));
+}
+function cumPinta(){
+  if(!cumVista) cumVista = cumMesActual();
+  const v = cumVista, hoy = new Date(hoyUTC());
+  const esMesDeHoy = (v.a === hoy.getUTCFullYear() && v.m === hoy.getUTCMonth());
+  const diaHoy = hoy.getUTCDate();
+  $('#cumMes').textContent = MES_LARGO[v.m].toUpperCase()+' '+v.a;
+  $('#cumHoy').classList.toggle('oculto', esMesDeHoy);
+
+  const lista = cumDelMes(v);
+  const nuevos = lista.filter(x=>x.nuevo).length;
+  const hoyCumplen = esMesDeHoy ? lista.filter(x=>x.dia === diaHoy).length : 0;
+  const faltan = esMesDeHoy ? lista.filter(x=>x.dia > diaHoy).length : 0;
+
+  $('#cumResumen').innerHTML = !lista.length
+    ? 'Nadie cumple años en '+MES_LARGO[v.m]+'.'
+    : '<b>'+lista.length+'</b> cumpleaños en '+MES_LARGO[v.m]+
+      (hoyCumplen ? ' · <b style="color:var(--ambar)">'+hoyCumplen+' hoy</b>' : '')+
+      (esMesDeHoy ? ' · faltan <b>'+faltan+'</b>' : '')+
+      (nuevos ? ' · <b>'+nuevos+'</b> de ellos recién '+(nuevos===1?'entró':'entraron')+' al equipo' : '');
+
+  if(!lista.length){
+    $('#cumCuerpo').innerHTML = '<div style="padding:18px;color:var(--suave)">Sin cumpleaños este mes.</div>';
+  } else {
+    /* En el mes de hoy se parte en tres para que lo que viene quede arriba;
+       en otro mes es una sola lista, que es como se lee una agenda. */
+    const grupos = esMesDeHoy
+      ? [['Hoy',          lista.filter(x=>x.dia === diaHoy)],
+         ['Lo que viene', lista.filter(x=>x.dia > diaHoy)],
+         ['Ya pasaron',   lista.filter(x=>x.dia < diaHoy)]]
+      : [[null, lista]];
+    $('#cumCuerpo').innerHTML = grupos.filter(g=>g[1].length).map(([tit, gente])=>
+      (tit ? '<div class="cum-grupo">'+tit+' <span style="font-weight:400">· '+gente.length+'</span></div>' : '')+
+      gente.map(x=>cumFila(x, esMesDeHoy, diaHoy)).join('')
+    ).join('');
+  }
+
+  const sinFecha = EQ_LISTA.filter(a=>a.activo !== false && !partesFecha(a.nacimiento)).length;
+  $('#cumPie').innerHTML = sinFecha
+    ? '<b>'+sinFecha+'</b> asesores no tienen fecha de nacimiento, así que no aparecen en ningún mes. '+
+      'Están en la pestaña Base, con el filtro «Sin fecha de nacimiento».'
+    : 'Todos los asesores activos tienen su fecha de nacimiento cargada.';
+}
+function cumFila(x, esMesDeHoy, diaHoy){
+  const a = x.a;
+  const estado = !esMesDeHoy ? '' : x.dia === diaHoy ? ' hoy' : x.dia < diaHoy ? ' pasado' : '';
+  const zona = [a.distrito, a.provincia].filter(Boolean).join(' · ');
+  const wa = cumEnlaceWa(a);
+  return '<div class="cum-fila'+estado+'">'+
+    '<div class="cum-dia"><b>'+x.dia+'</b><span>'+MES[cumVista.m]+'</span></div>'+
+    '<div class="cum-quien">'+
+      '<div class="cum-nom">'+escapa(a.nombre||'')+
+        (x.nuevo ? '<span class="cum-nuevo">NUEVO</span>' : '')+'</div>'+
+      '<div class="cum-sub">'+
+        (x.cumple!=null ? 'cumple '+x.cumple+' años' : 'sin edad')+
+        (a.codigo_asesor ? ' · '+escapa(a.codigo_asesor) : '')+
+        (zona ? ' · '+escapa(zona) : '')+
+        (x.nuevo && a.ingreso_fecha ? ' · entró el '+escapa(fFecha(Date.parse(a.ingreso_fecha+'T00:00:00Z'))) : '')+
+      '</div>'+
+    '</div>'+
+    (wa ? '<a class="cum-wa" href="'+wa+'" target="_blank" rel="noopener">💬 Saludar</a>'
+        : '<span class="cum-sincel">sin celular</span>')+
+  '</div>';
+}
+/* Para el saludo del mes en el grupo: la lista en texto, lista para pegar. */
+function cumTexto(){
+  const v = cumVista, lista = cumDelMes(v);
+  if(!lista.length) return 'Nadie cumple años en '+MES_LARGO[v.m]+' '+v.a+'.';
+  return '🎂 Cumpleaños de '+MES_LARGO[v.m]+'\n\n' +
+    lista.map(x=>x.dia+' · '+x.a.nombre+
+      (x.cumple!=null ? ' ('+x.cumple+')' : '')+
+      (x.nuevo ? ' — nuevo en el equipo' : '')).join('\n');
 }
 
 /* Qué se puede poner en el campo del código: el de Rena Ware (5 a 7 dígitos)
