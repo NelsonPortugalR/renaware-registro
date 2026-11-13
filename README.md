@@ -122,6 +122,13 @@ la muestre en DD/MM/AAAA. Si el formato no calza, el disparador la deja en
 blanco sin avisar. En el panel de asesores se edita a mano y el filtro «Sin
 fecha de nacimiento» muestra a quiénes les falta.
 
+**Todo campo nuevo de `datos` va declarado en el molde inicial.** `DATOS_VACIOS`
+es una copia del objeto `datos` tal como se declara, y es lo que vacía los
+datos al cambiar de registro. `restauraBorrador()` mezcla el molde sobre lo que
+haya en memoria y después el borrador: una clave que no esté en el molde **no
+se borra**, así que el dato de una persona se cuela en el borrador de otra —y
+el formulario deja aparcar varios registros a la vez—. Pasó con `nacimiento`.
+
 Un afiliado nuevo queda disponible en los tres lados el mismo día: en
 `clientes` y en el buscador de clientes (lo hace `engancha_cliente`, que corre
 para todo registro), y en la base de asesores con su ficha llena

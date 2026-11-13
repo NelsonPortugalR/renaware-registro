@@ -360,7 +360,11 @@ const datos = {
   tipoRegistro:'',                       // 'afiliado' | 'venta'
   /* --- afiliado --- */
   asesorAfiliador:'', registradoPor:'', esPropio:null,
-  nombreAfiliado:'', dni:'', celular:'', email:'',
+  /* nacimiento tiene que estar AQUÍ, no solo aparecer al llenarse: el molde es
+     lo que vacía «Empezar de nuevo», y una clave que no está en el molde no se
+     borra. Faltando, la fecha de una persona quedaba en memoria y el paso
+     siguiente la ofrecía ya escrita para la siguiente. */
+  nombreAfiliado:'', dni:'', nacimiento:'', celular:'', email:'',
   /* --- venta --- */
   ventaModalidad:'', ventaTipo:'',       // 'Contado' | 'Crédito'  /  'Autocompra' | 'Venta a terceros'
   ventaVendedor:'', ventaComprador:'', ventaDni:'',
