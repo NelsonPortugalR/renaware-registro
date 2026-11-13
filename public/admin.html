@@ -836,7 +836,8 @@ function aPanel(x){
                if(!c) return n;
                return c + ' - ' + (n.startsWith(c) ? n.slice(c.length).trim() : n);
              }),
-    itemsRaw: (x.registro_items||[]).slice().sort((a,b)=>a.orden-b.orden),
+    itemsRaw: (x.registro_items||[]).slice().sort((a,b)=>a.orden-b.orden)
+             .map(i=>Object.assign({}, i, {regalo:(i.regalo||'').trim()})),
     analistaId: x.analista_id || null,
     bitacora: (x.bitacora||[]).map(b=>({f:Date.parse(b.momento), t:b.texto})).sort((a,b)=>a.f-b.f),
     detalle: x.detalle || {},
@@ -1015,7 +1016,24 @@ function datosContrato(r){
                          : enTrabajo ? d.trab_departamento : (r.departamento||d.departamento));
   pon('entrega_celular', r.celular);
 
-  const mercaderia = (r.items || []).slice(0,4);
+  /* Mercadería: hasta 4 líneas en el contrato. El regalo del especial va en su
+     PROPIA línea y en letra más chica. Probamos meterlo detrás del producto y
+     no entra: el nombre de un especial ya ocupa la caja entera y los dos
+     quedaban en 4 pt, ilegibles. En línea aparte el producto conserva su
+     tamaño. Si las 4 líneas están ocupadas por productos, el regalo se pega
+     al final de la última, chico, que es mejor que perderlo. */
+  const lineasProd = (r.items || []).slice(0,4).map(t=>({texto:t, chico:false, regalo:''}));
+  const regalos = [];
+  (r.itemsRaw || []).forEach(i=>{
+    const g = (i.regalo||'').trim();
+    if(g && !regalos.includes(g)) regalos.push(g);
+  });
+  const mercaderia = lineasProd;
+  if(regalos.length){
+    const texto = 'Incluye de regalo: ' + regalos.join('  +  ');
+    if(mercaderia.length < 4) mercaderia.push({texto, chico:true, regalo:''});
+    else mercaderia[3] = Object.assign({}, mercaderia[3], {regalo: regalos.join(' + ')});
+  }
 
   if(!esCredito) return {campos, mercaderia, casillas};   // contado no lleva laborales ni referencias
 
@@ -1088,11 +1106,39 @@ async function generaContrato(r, reescrito){
     pag.drawText(s, {x, y: H - cfg.y + est.sobre_linea, size: tam, font: fuente, color: tinta});
   };
 
+  /* Producto y regalo en la misma línea, con el regalo más chico. Se busca el
+     par de tamaños que entre en la caja: primero se encoge el conjunto, y si
+     aun al mínimo no cabe, se recorta el regalo, nunca el producto. */
+  const escribeMercaderia = (linea, cfg)=>{
+    const texto = String(linea.texto || '');
+    /* Sin emoji: la Helvetica del PDF no los tiene y reventaría al dibujar */
+    const regalo = linea.regalo ? '  + ' + linea.regalo : '';
+    /* Línea de solo regalo: va al 75% del tamaño normal */
+    if(!regalo) return escribe(texto, Object.assign({}, cfg,
+      linea.chico ? {tamano: (cfg.tamano || est.tamano) * 0.75} : {}));
+    /* Las 4 líneas llenas: el regalo se pega al final de la última, chico */
+    const ancho = cfg.x1 - cfg.x0 - est.margen_x*2;
+    const base = cfg.tamano || est.tamano;
+    let tam = base, mini = Math.max(4, base * 0.7), reg = regalo;
+    const mide = ()=> fuente.widthOfTextAtSize(texto, tam) + fuente.widthOfTextAtSize(reg, mini);
+    while(mide() > ancho && tam > 4.5){ tam -= 0.25; mini = Math.max(4, tam * 0.7); }
+    while(mide() > ancho && reg.length > 8) reg = reg.slice(0, -2).trimEnd() + '…';
+    const y = H - cfg.y + est.sobre_linea;
+    let x = cfg.x0 + est.margen_x;
+    pag.drawText(texto, {x, y, size: tam, font: fuente, color: tinta});
+    pag.drawText(reg, {x: x + fuente.widthOfTextAtSize(texto, tam), y, size: mini,
+                       font: fuente, color: tinta});
+  };
+
   if(reescrito && r.numeroPedido) datos.campos.reescrito_nro = r.numeroPedido;
   for(const [k,v] of Object.entries(datos.campos)){
     const cfg = P.campos[k]; if(cfg) escribe(v, cfg);
   }
-  datos.mercaderia.forEach((linea,i)=>{ if(P.codigos_mercaderia[i]) escribe(linea, P.codigos_mercaderia[i]); });
+  datos.mercaderia.forEach((linea,i)=>{
+    const cfg = P.codigos_mercaderia[i]; if(!cfg) return;
+    if(typeof linea === 'string') return escribe(linea, cfg);
+    escribeMercaderia(linea, cfg);
+  });
   for(const nombre of datos.casillas){
     const cb = P.casillas[nombre]; if(!cb) continue;
     const alto = cb.y1 - cb.y0, tam = Math.min(alto + 1.5, 9);
@@ -1298,6 +1344,7 @@ function abrir(id){
   /* Productos editables */
   ITEMS_reg = r;
   ITEMS_ED = (r.itemsRaw||[]).map(x=>({codigo:x.codigo, nombre:x.nombre, lista:x.lista,
+                                       regalo:(x.regalo||'').trim(),
                                        precio_cliente:Number(x.precio_cliente||0),
                                        precio_asesor:Number(x.precio_asesor||0)}));
   cargaCatalogo().then(()=>pintaItems(r));
@@ -1328,6 +1375,7 @@ function abrir(id){
     if(add){
       const p = (CATALOGO||[]).find(x=>String(x.codigo)===add.dataset.cod && String(x.lista_id)===add.dataset.lista);
       if(p){ ITEMS_ED.push({codigo:p.codigo, nombre:p.nombre, lista:p.lista_id,
+                            regalo:(p.regalo||'').trim(),
                             precio_cliente:Number(p.precio||0), precio_asesor:Number(p.precio_asesor||0)});
              pintaItems(r); pintaRecalculo(r); }
       return;
@@ -1943,6 +1991,7 @@ function guardarDetalle(){
     /* El registro en memoria también se queda con los productos nuevos: si no,
        al repintar la ficha volvían a salir los viejos. */
     r.itemsRaw = ITEMS_ED.map((x,n)=>({orden:n+1, lista:x.lista, codigo:x.codigo, nombre:x.nombre,
+                                       regalo:x.regalo||'',
                                        precio_cliente:x.precio_cliente, precio_asesor:x.precio_asesor}));
     tareas.push(fetch(SB_URL+'/rest/v1/registro_items?registro_id=eq.'+r.id,
       {method:'DELETE', headers:cab()}).then(()=>{
@@ -1951,7 +2000,7 @@ function guardarDetalle(){
           method:'POST',
           headers:Object.assign({}, cab(), {'Content-Type':'application/json','Prefer':'return=minimal'}),
           body: JSON.stringify(ITEMS_ED.map((x,n)=>({registro_id:r.id, orden:n+1, lista:x.lista,
-            codigo:x.codigo, nombre:x.nombre,
+            codigo:x.codigo, nombre:x.nombre, regalo:(x.regalo||'').trim() || null,
             precio_cliente:x.precio_cliente, precio_asesor:x.precio_asesor})))});
       }));
   }
@@ -3627,7 +3676,7 @@ let CATALOGO = null, ITEMS_ED = [], ITEMS_reg = null;
 async function cargaCatalogo(){
   if(CATALOGO) return CATALOGO;
   try{
-    CATALOGO = await sbGet('productos?select=codigo,nombre,lista_id,precio,precio_asesor&activo=eq.true&order=lista_id,codigo&limit=3000');
+    CATALOGO = await sbGet('productos?select=codigo,nombre,lista_id,precio,precio_asesor,regalo&activo=eq.true&order=lista_id,codigo&limit=3000');
   }catch(e){ CATALOGO = []; }
   return CATALOGO;
 }
@@ -3656,6 +3705,8 @@ function pintaItems(r){
             '<div class="fuente-cab">Producto '+(i+1)+
               '<span style="float:right"><button class="btn-mini it-quita" data-i="'+i+'">Quitar</button></span></div>'+
             '<div style="font-size:13px;margin:4px 0">'+escapa(it.nombre||'(sin nombre)')+'</div>'+
+            (it.regalo ? '<div style="font-size:12.5px;color:var(--verde);margin:-2px 0 4px">🎁 '+
+                         escapa(it.regalo)+'</div>' : '')+
             '<div class="ayuda mono">'+escapa(it.codigo||'?')+' · '+escapa(it.lista||'?')+
               ' · cliente '+soles(it.precio_cliente)+' · asesor '+soles(it.precio_asesor)+
               (auto ? ' <b>← se usa el de asesor</b>' : ' <b>← se usa el de cliente</b>')+'</div>'+

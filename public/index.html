@@ -123,6 +123,8 @@
   /* El código va delante del nombre y se distingue por color, no por tamaño:
      es lo primero que se lee para no confundir dos especiales parecidos. */
   .ip-cod{color:#5D7183;font-variant-numeric:tabular-nums;font-weight:700}
+  /* El regalo del especial: se lee, pero no compite con el producto */
+  .ip-reg{display:block;font-size:13px;font-weight:600;color:#0C7461;margin-top:3px;line-height:1.3}
   .ip-p{font-size:15px;font-weight:700;color:var(--azul,#0E3A5D);font-variant-numeric:tabular-nums;margin-left:auto}
   .sin-res{padding:16px 4px;color:#5D7183;font-size:15px;text-align:center}
   .banner-guardado{
@@ -1870,15 +1872,19 @@ function dockBuscador(lista, onListo){
     lista2.slice(0,40).forEach(p=>{
       const b = document.createElement('button');
       b.className = 'item-prod' + (dePedido.has(p.l+'|'+p.c) ? ' ya' : '');
-      b.innerHTML = '<span class="ip-n"><b class="ip-cod">'+escapa(String(p.c||''))+'</b> '+escapa(p.n)+'</span>'+
+      /* El regalo del especial estaba en la base y no se veía en ningún lado:
+         es parte de lo que se ofrece, así que va debajo del nombre. */
+      b.innerHTML = '<span class="ip-n"><b class="ip-cod">'+escapa(String(p.c||''))+'</b> '+escapa(p.n)+
+        (p.r ? '<span class="ip-reg">🎁 '+escapa(p.r)+'</span>' : '')+'</span>'+
         '<span class="ip-m">'+
         '<span class="ip-p">'+fmtSoles(esAutocompra() ? precioAsesorDe(p) : p.p)+'</span></span>';
       b.addEventListener('click', ()=>{
-        const it = {lista:p.l, codigo:p.c, nombre:p.n, precio:p.p, precioAsesor:precioAsesorDe(p), puntos:p.pts||0, cantidad:1};
+        const it = {lista:p.l, codigo:p.c, nombre:p.n, regalo:p.r||'', precio:p.p,
+                    precioAsesor:precioAsesorDe(p), puntos:p.pts||0, cantidad:1};
         datos.items = datos.items || [];
         datos.items.push(it);
         sincronizaItems();
-        burbujaUser(conCodigo(it.codigo, it.nombre));
+        burbujaUser(nombreConRegalo(it));
         dockLimpiar();
         ofreceUpsell(onListo);
       });
@@ -1926,6 +1932,21 @@ function conCodigo(codigo, nombre){
 }
 /* El nombre que ve el asesor, con código; se usa en el resumen y la pestaña. */
 function nombreItem(it){ return conCodigo(it && it.codigo, it && it.nombre); }
+/* El regalo NO se mete dentro del nombre: el nombre va tal cual a la base y al
+   contrato, y meterlo ahí lo repetiría en todos lados. Se muestra al lado. */
+function regaloItem(it){ return (it && it.regalo || '').trim(); }
+/* Los especiales de una misma campaña suelen traer el mismo regalo: se
+   muestra una vez, no una por producto. */
+function regalosDelPedido(){
+  const vistos = [];
+  (datos.items||[]).forEach(it=>{ const r = regaloItem(it);
+    if(r && !vistos.includes(r)) vistos.push(r); });
+  return vistos.join(' · ');
+}
+function nombreConRegalo(it){
+  const r = regaloItem(it);
+  return nombreItem(it) + (r ? '  🎁 ' + r : '');
+}
 function tituloCorto(n){
   const s = String(n||'');
   const m = s.match(/^([^·]{3,34})·/);          /* "384700 Especial #22 · ..." */
@@ -1935,7 +1956,9 @@ function tituloCorto(n){
 function loopProductos(){
   const t = totalesPedido();
   const items = datos.items || [];
-  const detalle = items.map((i,n)=>'• '+escapa(i.nombre)).join('<br>');
+  const detalle = items.map((i,n)=>'• '+escapa(i.nombre)+
+      (regaloItem(i) ? '<span class="peque" style="margin:1px 0 0">🎁 '+escapa(regaloItem(i))+'</span>' : '')
+    ).join('<br>');
   burbujaBot('Pedido hasta ahora:<br>'+detalle+'<span class="peque">Total: <b>'+fmtSoles(t.total)+'</b></span>').then(()=>{
     const ops = [
       {t:'➕ Agregar otro producto', fn:()=>{ burbujaUser('➕ Agregar otro producto'); pedirProducto(loopProductos, false); }},
@@ -3391,7 +3414,7 @@ function vComprobante(){
   return c;
 }
 function vProducto(){
-  const it = (datos.items||[]).map(x=>typeof x === 'string' ? x : nombreItem(x)).filter(Boolean);
+  const it = (datos.items||[]).map(x=>typeof x === 'string' ? x : nombreConRegalo(x)).filter(Boolean);
   if(it.length) return it.join(' + ');
   return vSi(datos.producto);
 }
@@ -3697,6 +3720,7 @@ async function irResumenVenta(){
   html += fila('Entrega en', datos.distrito+' · '+datos.provincia+' · '+datos.departamento+(esZonaCredito()?'':' · sin crédito'));
   html += fila('Dirección de entrega', datos.direccion);
   html += fila('Producto / promoción', datos.producto);
+  if(regalosDelPedido()) html += fila('Incluye de regalo', regalosDelPedido());
   html += fila('Adicionales', datos.adicionales.length ? datos.adicionales.join(' + ') : 'Ninguno');
   html += '<div class="res-grid">'+fila('Medio de pago', resumenPagosRw() || datos.ventaMedioPago)+
           '<div class="res-item"><div class="res-label">Constancia'+((datos.constancias||[]).length>1?'s ('+datos.constancias.length+')':'')+'</div>'+
@@ -3836,6 +3860,7 @@ async function irResumenCredito(){
     (datos.reciboMesTexto ? ' · '+datos.reciboMesTexto : '') +
     (datos.reciboContrato ? ' · N° '+datos.reciboContrato : ' · foto ✔'));
   html += fila('Producto / promoción', datos.producto);
+  if(regalosDelPedido()) html += fila('Incluye de regalo', regalosDelPedido());
   html += fila('Adicionales', datos.adicionales.length ? datos.adicionales.join(' + ') : 'Ninguno');
   html += '<div class="res-grid">'+fila('Medio de pago', resumenPagosRw() || datos.ventaMedioPago)+
           '<div class="res-item"><div class="res-label">Constancia'+((datos.constancias||[]).length>1?'s ('+datos.constancias.length+')':'')+'</div>'+
@@ -4579,7 +4604,7 @@ async function rwEnviar(reg, archivos){
       nombre:reg.conyuge.nombre, dni:reg.conyuge.dni||'', celular:reg.conyuge.celular||''});
     const paquete = {
       registro: fila,
-      items: (datos.items||[]).map((it,k)=>({orden:k+1, lista:it.lista, codigo:it.codigo,
+      items: (datos.items||[]).map((it,k)=>({orden:k+1, lista:it.lista, codigo:it.codigo, regalo:it.regalo||'',
         nombre:it.nombre, precio_cliente:it.precio, precio_asesor:it.precioAsesor})),
       personas: personas,
       documentos: docs,
@@ -4609,7 +4634,7 @@ async function cargaCatalogo(){
     const cab = {apikey:SUPABASE_KEY, Authorization:'Bearer '+SUPABASE_KEY};
     const [ls, ps, fs, rg] = await Promise.all([
       fetch(SUPABASE_URL+'/rest/v1/v_listas_vigentes?select=*&order=orden', {headers:cab}).then(r=>r.json()),
-      fetch(SUPABASE_URL+'/rest/v1/productos?activo=eq.true&select=lista_id,codigo,nombre,categoria,precio,valor_comisionable,puntos&order=orden', {headers:cab}).then(r=>r.json()),
+      fetch(SUPABASE_URL+'/rest/v1/productos?activo=eq.true&select=lista_id,codigo,nombre,categoria,precio,valor_comisionable,puntos,regalo&order=orden', {headers:cab}).then(r=>r.json()),
       fetch(SUPABASE_URL+'/rest/v1/factores_credito?activo=eq.true&select=meses,factor', {headers:cab}).then(r=>r.json()),
       fetch(SUPABASE_URL+'/rest/v1/reglas_credito?id=eq.vigente&select=*', {headers:cab}).then(r=>r.json())
     ]);
@@ -4622,7 +4647,8 @@ async function cargaCatalogo(){
       const vigentes = new Set(LISTAS.map(l=>l.id));
       PRODUCTOS.length = 0;
       ps.filter(p=>vigentes.has(p.lista_id)).forEach(p=>PRODUCTOS.push({l:p.lista_id, c:p.codigo,
-        n:p.nombre, g:p.categoria||'', p:Number(p.precio), vc:Number(p.valor_comisionable||0), pts:p.puntos||0}));
+        n:p.nombre, g:p.categoria||'', p:Number(p.precio), vc:Number(p.valor_comisionable||0),
+        pts:p.puntos||0, r:(p.regalo||'').trim()}));
     }
     if(Array.isArray(fs) && fs.length){ fs.forEach(f=>{ FACTORES[f.meses] = Number(f.factor); }); }
     if(Array.isArray(rg) && rg.length){

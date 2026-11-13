@@ -188,6 +188,31 @@ precio en su casilla y CRÉDITO vacío. Al volver a crédito reaparece el campo 
 cuotas y la evaluación vuelve a `pendiente`. En los dos sentidos queda anotado
 en la bitácora del registro, porque un reescrito tiene que poder explicarse.
 
+## El regalo de los especiales
+
+Un especial trae un complemento de regalo —la Joyita y el juego de servir en
+Compartir, la tetera con infusor en Navidad— y vive en `productos.regalo`.
+Estaba en la base y no se veía en ninguna parte: ni al vender, ni en la ficha,
+ni en el contrato.
+
+Ahora se ve al elegir el producto (debajo del nombre, en verde), en el pedido
+en curso, en el resumen de la venta como «Incluye de regalo» y en la ficha del
+panel. **No se mete dentro del nombre**: el nombre va tal cual a
+`registro_items.nombre` y al contrato, y meterlo ahí lo repetiría en todos
+lados. Viaja en su propia columna, `registro_items.regalo`, que se guarda con
+la venta: el catálogo cambia de campaña y el contrato debe decir lo que se
+prometió ese día.
+
+En el PDF el regalo va en **su propia línea de mercadería**, al 75% del tamaño.
+Se probó ponerlo detrás del producto en la misma línea y no entra: el nombre de
+un especial ya ocupa la caja entera (268 pt) y los dos quedaban en 4 pt,
+ilegibles. En línea aparte el producto conserva su tamaño. Si las cuatro líneas
+están ocupadas por productos, el regalo se pega al final de la última, chico,
+que es mejor que perderlo. Nada de emojis en el PDF: la Helvetica incrustada no
+los tiene y revienta al dibujar.
+
+SQL: `sql/20261112_regalo_en_los_items.sql`.
+
 ## Cumpleaños del equipo
 
 En **Asesores** hay dos pestañas: la **Base** de siempre y **🎂 Cumpleaños**.
