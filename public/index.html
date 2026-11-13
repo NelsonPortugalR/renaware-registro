@@ -339,7 +339,7 @@
   </div>
 </header>
 <div class="banner-demo">Equipo Arequipa · Rena Ware</div>
-<div class="banner-guardado">💾 Tu avance se guarda solo. Si te falta un dato, cierra y vuelve a este mismo link para continuar.</div>
+<div class="banner-guardado">💾 Tu avance se guarda solo. ¿Varios a la vez? Abre este link en otra pestaña: cada una lleva su registro.</div>
 
 <main id="chat" aria-live="polite"></main>
 
@@ -451,6 +451,58 @@ const CLAVE_BORRADORES = 'rw_borradores';
 const MAX_BORRADORES = 6;
 let borradorActual = null;
 
+/* ---------- Varias pestañas a la vez ----------
+   Los borradores viven en localStorage, que TODAS las pestañas comparten. Lo
+   que no se comparte es sessionStorage: es de cada pestaña y aguanta una
+   recarga. Ahí se apunta cuál registro está llenando esta pestaña, y con eso:
+     · recargar o volver a esta pestaña retoma SU registro, sin preguntar;
+     · abrir una pestaña nueva ofrece la lista para elegir o empezar otro;
+     · dos pestañas no se pisan, porque cada una sabe cuál es el suyo.
+   Además cada pestaña firma su borrador (quién y cuándo) para avisar si se
+   intenta abrir en dos sitios a la vez. */
+function ssSet(k,v){ try{ sessionStorage.setItem(k,v); }catch(e){} }
+function ssGet(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } }
+function ssDel(k){ try{ sessionStorage.removeItem(k); }catch(e){} }
+
+const PESTANA = (function(){
+  let id = ssGet('rw_pestana');
+  if(!id){ id = 'p' + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36); ssSet('rw_pestana', id); }
+  return id;
+})();
+const VIVO_MS = 45000;          // una firma más vieja que esto ya no cuenta
+function fijaBorradorDePestana(id){
+  borradorActual = id || null;
+  if(id) ssSet('rw_pestana_borrador', id); else ssDel('rw_pestana_borrador');
+}
+function borradorDeEstaPestana(){ return ssGet('rw_pestana_borrador'); }
+/* ¿Lo está llenando otra pestaña ahora mismo? */
+function abiertoEnOtraPestana(b){
+  return !!(b && b.pestana && b.pestana !== PESTANA &&
+            (Date.now() - (b.visto||0)) < VIVO_MS);
+}
+/* Mientras esta pestaña esté viva, refresca su firma para que otra no crea
+   que el registro quedó libre. */
+setInterval(()=>{
+  if(!borradorActual) return;
+  const m = leeBorradores();
+  const b = m[borradorActual];
+  if(!b) return;
+  b.pestana = PESTANA; b.visto = Date.now();
+  escribeBorradores(m);
+}, 15000);
+/* Acabado un registro, «hacer otro» da una pantalla limpia aquí mismo: se
+   recarga —para soltar las fotos de la memoria y el hilo de la conversación—
+   y la marca hace que arranque en blanco en vez de ofrecer la lista. */
+function otroRegistroEnEstaPestana(){
+  ssSet('rw_otro_en_blanco', '1');
+  location.reload();
+}
+
+/* Si otra pestaña guarda o envía, el contador de «⇄» se actualiza solo */
+window.addEventListener('storage', e=>{
+  if(e.key === CLAVE_BORRADORES) pintaBtnRegistros();
+});
+
 function leeBorradores(){
   let m = {};
   try{ m = JSON.parse(lsGet(CLAVE_BORRADORES) || '{}') || {}; }catch(e){ m = {}; }
@@ -491,7 +543,7 @@ function escribeBorradores(m){
        desaparecían sin avisar y había que volver a subirlos al recargar.
        El que está en la mano no se toca nunca. */
     const viejos = Object.keys(m2)
-      .filter(k => k !== borradorActual)
+      .filter(k => k !== borradorActual && !abiertoEnOtraPestana(m2[k]))
       .sort((a,b)=>(m2[a].actualizado||0)-(m2[b].actualizado||0));
     for(const k of viejos){
       delete m2[k];
@@ -546,11 +598,12 @@ function guardaBorrador(idPaso){
       const masViejo = Object.keys(m).sort((a,b)=>(m[a].actualizado||0)-(m[b].actualizado||0))[0];
       delete m[masViejo];
     }
-    borradorActual = 'b' + Date.now() + Math.floor(Math.random()*1000);
+    fijaBorradorDePestana('b' + Date.now() + Math.floor(Math.random()*1000));
   }
   m[borradorActual] = { v:2, id:borradorActual, paso:idPaso,
     cola:[idPaso].concat(cola), pasosHechos:pasosHechos, totalPasos:totalPasos,
-    datos:datos, actualizado:Date.now() };
+    datos:datos, actualizado:Date.now(),
+    pestana:PESTANA, visto:Date.now() };
   escribeBorradores(m);
   pintaBtnRegistros();
 }
@@ -558,7 +611,7 @@ function limpiaBorrador(){
   const m = leeBorradores();
   if(borradorActual) delete m[borradorActual];
   escribeBorradores(m);
-  borradorActual = null;
+  fijaBorradorDePestana(null);
   pintaBtnRegistros();
 }
 function otrosBorradores(){
@@ -572,7 +625,8 @@ function pintaBtnRegistros(){
   const n = otrosBorradores().length;
   b.style.display = (!sinAtras && n > 0) ? 'flex' : 'none';
   b.textContent = '⇄ ' + n;
-  b.title = n === 1 ? 'Hay otro registro a medio llenar' : 'Hay ' + n + ' registros a medio llenar';
+  b.title = n === 1 ? 'Otro registro a medio llenar — toca para abrirlo'
+                    : n + ' registros a medio llenar — toca para elegir';
 }
 
 /* ================== CORREOS ================== */
@@ -4004,7 +4058,7 @@ function dockBienvenidaAfiliado(){
   const bWa = chipWhatsApp('🎉 Dar la bienvenida a '+primerNombre(datos.nombreAfiliado), datos.celular, mensajeBienvenida());
   const bNuevo = document.createElement('button');
   bNuevo.className='chip secund'; bNuevo.textContent='➕ Hacer otro registro';
-  bNuevo.addEventListener('click', ()=>location.reload());
+  bNuevo.addEventListener('click', otroRegistroEnEstaPestana);
   c.appendChild(bWa); c.appendChild(bNuevo);
   dockInner.appendChild(c);
 }
@@ -4900,14 +4954,14 @@ function dockCompartirPedido(){
       const bWa = chipWhatsApp('💬 Abrir WhatsApp de '+primerNombre(datos.ventaComprador), datos.ventaCelular, mensajeCliente());
       const bN = document.createElement('button');
       bN.className='chip secund'; bN.textContent='➕ Hacer otro registro';
-      bN.addEventListener('click', ()=>location.reload());
+      bN.addEventListener('click', otroRegistroEnEstaPestana);
       c2.appendChild(bWa); c2.appendChild(bN);
       dockInner.appendChild(c2);
     });
   });
   const bNuevo = document.createElement('button');
   bNuevo.className='chip secund'; bNuevo.textContent='➕ Hacer otro registro';
-  bNuevo.addEventListener('click', ()=>location.reload());
+  bNuevo.addEventListener('click', otroRegistroEnEstaPestana);
   c.appendChild(bEnv); c.appendChild(bNuevo);
   dockInner.appendChild(c);
 }
@@ -4917,7 +4971,7 @@ function restauraBorrador(b){
   Object.keys(datos).forEach(k=>{ delete datos[k]; });
   Object.assign(datos, JSON.parse(JSON.stringify(DATOS_VACIOS)));
   Object.assign(datos, b.datos);
-  borradorActual = b.id || borradorActual;
+  fijaBorradorDePestana(b.id || borradorActual);
   cola = b.cola.slice();
   totalPasos = b.totalPasos;
   pasosHechos = b.pasosHechos - 1;
@@ -4935,7 +4989,7 @@ function restauraBorrador(b){
 function empiezaNuevo(){
   Object.keys(datos).forEach(k=>{ delete datos[k]; });
   Object.assign(datos, JSON.parse(JSON.stringify(DATOS_VACIOS)));
-  borradorActual = null;
+  fijaBorradorDePestana(null);
   historial = [];
   sinAtras = false;
   cola = []; totalPasos = 0; pasosHechos = 0;
@@ -4948,28 +5002,85 @@ function menuRegistros(saludo){
   if(!otros.length){ empiezaNuevo(); return; }
   /* Lo que está en curso se guarda antes de soltarlo */
   if(borradorActual && cola.length) guardaBorrador(cola[0] || 'resumen');
-  burbujaBot(saludo || '¿Con cuál seguimos? 📋<span class="peque">Cada registro guarda su propio avance; puedes ir y venir entre ellos.</span>').then(()=>{
-    const ops = otros.map(b=>({
+  burbujaBot(saludo || '¿Cuál abres en esta pestaña? 📋<span class="peque">Todo se guarda solo. Puedes tener varios a medio llenar y cambiar entre ellos cuando quieras.</span>').then(()=>{
+    dockChips(opcionesDeBorradores(otros), true);
+  });
+}
+
+/* Los chips de la lista de registros. Se usan igual al arrancar y al tocar «⇄»,
+   para que digan lo mismo en los dos sitios. */
+function opcionesDeBorradores(lista){
+  const ops = lista.map(b=>{
+    const ocupado = abiertoEnOtraPestana(b);
+    return {
       t:'📋 '+escapa(tituloBorrador(b))+'<span class="peque">'+cuandoBorrador(b)+
+        (ocupado ? ' · <b>abierto en otra pestaña</b>' : '')+
         (b.sinFotos ? ' · sin fotos, se vuelven a pedir' : '')+'</span>',
-      fn:()=>{ burbujaUser('📋 '+tituloBorrador(b)); dockLimpiar(); restauraBorrador(b); }
+      fn:()=>{
+        burbujaUser('📋 '+tituloBorrador(b));
+        dockLimpiar();
+        /* Abrir el mismo registro en dos pestañas termina en que una pisa lo
+           que escribió la otra. Se avisa antes, no después. */
+        if(ocupado){
+          burbujaBot('⚠️ Ese registro lo estás llenando en <b>otra pestaña</b>.'+
+            '<span class="peque">Si lo abres también aquí, lo que escribas en una puede pisar lo de la otra. '+
+            'Mejor vuelve a esa pestaña, o empieza uno nuevo aquí.</span>').then(()=>{
+            dockChips([
+              {t:'↩️ Mejor elijo otro', clase:'primario', fn:()=>{
+                burbujaUser('↩️ Mejor elijo otro'); dockLimpiar(); menuRegistros(); }},
+              {t:'⚠️ Abrirlo aquí de todos modos', clase:'secund ancho', fn:()=>{
+                burbujaUser('⚠️ Abrirlo aquí de todos modos'); dockLimpiar(); restauraBorrador(b); }}
+            ], true);
+          });
+          return;
+        }
+        restauraBorrador(b);
+      }
+    };
+  });
+  ops.push({t:'➕ Empezar uno nuevo aquí', clase:'primario ancho', fn:()=>{
+    burbujaUser('➕ Empezar uno nuevo aquí'); dockLimpiar(); empiezaNuevo(); }});
+  /* Borrar es de a uno y con confirmación: en bloque se llevaba por delante
+     trabajo de otra pestaña sin que se notara. */
+  ops.push({t:'🗑️ Borrar alguno de la lista', clase:'secund ancho', fn:()=>{
+    burbujaUser('🗑️ Borrar alguno de la lista'); dockLimpiar(); menuBorrarBorrador(lista); }});
+  return ops;
+}
+
+function menuBorrarBorrador(lista){
+  burbujaBot('¿Cuál borras? <span class="peque">Se pierde lo que tenga escrito. Los demás siguen igual.</span>').then(()=>{
+    const ops = lista.map(b=>({
+      t:'🗑️ '+escapa(tituloBorrador(b))+'<span class="peque">'+cuandoBorrador(b)+'</span>',
+      fn:()=>{
+        burbujaUser('🗑️ '+tituloBorrador(b));
+        dockLimpiar();
+        burbujaBot('¿Seguro que borras <b>'+escapa(tituloBorrador(b))+'</b>?').then(()=>{
+          dockChips([
+            {t:'🗑️ Sí, borrarlo', clase:'secund', fn:()=>{
+              burbujaUser('🗑️ Sí, borrarlo');
+              const m = leeBorradores(); delete m[b.id];
+              escribeBorradores(m); pintaBtnRegistros();
+              dockLimpiar();
+              burbujaBot('Borrado.').then(()=>volverDeLaLista());
+            }},
+            {t:'↩️ No, dejarlo', clase:'primario', fn:()=>{
+              burbujaUser('↩️ No, dejarlo'); dockLimpiar(); volverDeLaLista(); }}
+          ]);
+        });
+      }
     }));
-    ops.push({t:'➕ Empezar uno nuevo', clase:'primario ancho', fn:()=>{
-      burbujaUser('➕ Empezar uno nuevo'); dockLimpiar(); empiezaNuevo(); }});
-    ops.push({t:'🗑️ Descartar los aparcados', clase:'secund ancho', fn:()=>{
-      burbujaUser('🗑️ Descartar los aparcados'); dockLimpiar();
-      const m = leeBorradores();
-      otros.forEach(b=>{ delete m[b.id]; });
-      escribeBorradores(m); pintaBtnRegistros();
-      burbujaBot('Listo, quedó solo el registro en curso.').then(()=>{
-        dockChips([{t:'➡️ Continuar', clase:'primario', fn:()=>{
-          burbujaUser('➡️ Continuar'); dockLimpiar();
-          if(cola.length) mostrarPaso(cola[0]); else empiezaNuevo();
-        }}]);
-      });
-    }});
+    ops.push({t:'↩️ Volver', clase:'primario ancho', fn:()=>{
+      burbujaUser('↩️ Volver'); dockLimpiar(); volverDeLaLista(); }});
     dockChips(ops, true);
   });
+}
+/* Después de borrar o cancelar: si esta pestaña ya tenía un registro, sigue
+   con él; si no, vuelve a la lista. */
+function volverDeLaLista(){
+  if(borradorActual && cola.length){ mostrarPaso(cola[0]); return; }
+  const otros = otrosBorradores();
+  if(otros.length) menuRegistros();
+  else empiezaNuevo();
 }
 
 (async function(){
@@ -4980,33 +5091,42 @@ function menuRegistros(saludo){
                   .filter(b=>b && b.cola && b.cola.length)
                   .sort((a,b)=>(b.actualizado||0)-(a.actualizado||0));
 
-  if(lista.length === 1){
-    const b = lista[0];
-    await burbujaBot('¡Hola de nuevo! 👋 Tienes <b>'+escapa(tituloBorrador(b))+'</b> a medio llenar'+
-      (cuandoBorrador(b) ? ' ('+cuandoBorrador(b)+')' : '')+'. ¿Seguimos con eso?');
-    dockChips([
-      {t:'▶️ Continuar donde quedé', clase:'primario', fn:()=>{
-        burbujaUser('▶️ Continuar donde quedé'); dockLimpiar(); restauraBorrador(b); }},
-      {t:'➕ Empezar otro y guardar este', fn:()=>{
-        burbujaUser('➕ Empezar otro y guardar este'); dockLimpiar(); empiezaNuevo(); }},
-      {t:'🗑️ Descartarlo y empezar de cero', clase:'secund ancho', fn:async ()=>{
-        burbujaUser('🗑️ Descartarlo y empezar de cero');
-        borradorActual = b.id; limpiaBorrador();
-        dockLimpiar();
-        await burbujaBot('¡Listo! Empezamos desde cero 🙌<span class="peque">Te haré unas preguntas cortas, una por una.</span>');
-        empiezaNuevo();
-      }}
-    ], true);
+  /* 1. Esta pestaña ya venía llenando uno: se retoma sin preguntar nada. Es lo
+        que hace que recargar —o volver a la pestaña— sea indoloro, y lo que
+        permite tener varias abiertas cada una en lo suyo. */
+  /* Viene de «hacer otro registro»: pantalla en blanco, sin menú */
+  if(ssGet('rw_otro_en_blanco')){
+    ssDel('rw_otro_en_blanco');
+    await burbujaBot('Listo 🙌 Vamos con el siguiente.'+
+      (lista.length ? '<span class="peque">Tus '+lista.length+' registro'+(lista.length===1?'':'s')+
+        ' a medio llenar siguen guardados: el botón ⇄ los abre.</span>' : ''));
+    cola = []; totalPasos = 0;
+    mostrarPaso('tipoRegistro');
     return;
   }
 
-  if(lista.length > 1){
-    await burbujaBot('¡Hola de nuevo! 👋 Tienes <b>'+lista.length+' registros a medio llenar</b>.');
-    menuRegistros('¿Con cuál seguimos? 📋<span class="peque">Cada uno guarda su propio avance; puedes ir y venir entre ellos.</span>');
+  const mio = borradorDeEstaPestana();
+  const elMio = mio ? lista.find(b=>b.id === mio) : null;
+  if(elMio){
+    await burbujaBot('Seguimos con <b>'+escapa(tituloBorrador(elMio))+'</b> 👇'+
+      (lista.length > 1 ? '<span class="peque">Tus otros '+(lista.length-1)+
+        ' registro'+(lista.length-1===1?'':'s')+' siguen guardados; el botón ⇄ los abre.</span>' : ''));
+    restauraBorrador(elMio);
     return;
   }
 
-  await burbujaBot('¡Hola! 👋 Soy el asistente de <b>registro del equipo</b>.<span class="peque">Te haré unas preguntas cortas, una por una. Si no cuentas con algún dato, descuida: <b>tu avance se guarda automáticamente</b> y puedes volver a este mismo link cuando lo tengas para continuar donde quedaste.</span>');
+  /* 2. Pestaña nueva con registros a medio llenar: se elige, y punto. No se
+        pregunta por guardar —todo se guarda solo— ni por descartar. */
+  if(lista.length){
+    await burbujaBot('¡Hola! 👋 Tienes <b>'+lista.length+' registro'+(lista.length===1?'':'s')+
+      ' a medio llenar</b>.');
+    menuRegistros('¿Cuál abres en esta pestaña? 📋<span class="peque">Todo se guarda solo. '+
+      'Puedes dejar uno a medias, abrir otro en una pestaña nueva y volver cuando quieras.</span>');
+    return;
+  }
+
+  /* 3. Nada empezado: el saludo de siempre. */
+  await burbujaBot('¡Hola! 👋 Soy el asistente de <b>registro del equipo</b>.<span class="peque">Te haré unas preguntas cortas, una por una. Si no cuentas con algún dato, descuida: <b>tu avance se guarda automáticamente</b> y puedes volver a este mismo link cuando lo tengas para continuar donde quedaste.<br>¿Necesitas llenar varios a la vez? Abre este link en otra pestaña y elige «empezar uno nuevo»: cada pestaña lleva el suyo.</span>');
   cola = [];
   totalPasos = 0;
   mostrarPaso('tipoRegistro');

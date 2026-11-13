@@ -49,6 +49,34 @@ formulario. Las piezas principales:
 - `productos`, `v_listas_vigentes` — el catálogo y las listas vigentes
 - `factores_credito`, `reglas_credito` — el cálculo de cuotas
 
+## Varios registros a la vez, uno por pestaña
+
+El equipo llena varias ventas o afiliaciones en paralelo, en pestañas del mismo
+navegador. La pieza que lo hace posible es que **los borradores viven en
+`localStorage`, que todas las pestañas comparten, pero cuál está llenando cada
+pestaña vive en `sessionStorage`, que es de cada una y aguanta la recarga**. De
+ahí sale todo el comportamiento:
+
+- **Recargar o volver a una pestaña retoma SU registro**, sin menú: «Seguimos
+  con …».
+- **Una pestaña nueva pregunta una sola cosa**: «¿Cuál abres en esta pestaña?»,
+  con la lista y «➕ Empezar uno nuevo aquí».
+- **Dos pestañas no se pisan**, porque cada una sabe cuál es el suyo.
+
+Cada pestaña **firma** su borrador (`pestana` + `visto`, refrescado cada 15 s).
+Un borrador firmado por otra pestaña hace menos de 45 s sale marcado «abierto
+en otra pestaña», y abrirlo igual pide confirmación: dos pestañas en el mismo
+registro terminan pisándose. Esa misma firma protege el borrador vivo de otra
+pestaña cuando el almacenamiento se llena y hay que soltar borradores viejos.
+Un `storage` listener mantiene al día el contador del botón «⇄».
+
+**Lo que se quitó del menú, a propósito**: «guardar este» (todo se guarda solo,
+decirlo confunde) y «descartar los aparcados» (borraba en bloque, y con varias
+pestañas eso se llevaba por delante el trabajo de otra sin que se notara).
+Borrar quedó de a uno, con confirmación, detrás de «🗑️ Borrar alguno de la
+lista». Y «➕ Hacer otro registro», al terminar uno, recarga con una marca
+(`rw_otro_en_blanco`) para arrancar en blanco en vez de ofrecer la lista.
+
 ## Lo que el formulario ya no pregunta
 
 Cuando el comprador se elige del desplegable, en vez de escribirlo, el
