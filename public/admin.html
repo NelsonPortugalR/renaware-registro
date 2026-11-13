@@ -291,6 +291,8 @@
   .lista-campos input[type=date]{width:100%;border:1.5px solid var(--linea);border-radius:8px;
     padding:7px 9px;font-size:14px;background:var(--superficie)}
   .sw{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;white-space:nowrap;padding-bottom:7px}
+  /* Los dos interruptores de una lista de especiales: «Activa» y «En la web» */
+  .sws{display:flex;flex-direction:column}
   .estado-pill{padding:2px 10px;border-radius:99px;font-size:11.5px;font-weight:700}
   .ep-ok{background:var(--verde-f);color:var(--verde)}
   .ep-no{background:var(--rojo-f);color:var(--rojo)}
@@ -420,6 +422,7 @@
     /* Las dos fechas y el interruptor de cada lista no entran en una fila */
     .lista-campos{grid-template-columns:1fr;gap:9px}
     .sw{white-space:normal;padding-bottom:0}
+    .sws{flex-direction:row;flex-wrap:wrap;gap:4px 26px}
     textarea{min-height:90px}
     .buscar{flex:1 1 100%}
     .buscar input{width:100%}
@@ -571,6 +574,7 @@
       <button class="cerrar" id="mlCerrar">✕</button>
     </div>
     <p class="modal-ayuda">Los asesores solo ven las listas activas y dentro de su vigencia. Si Rena Ware extiende una promoción, cambia la fecha aquí y el formulario la respeta al instante.</p>
+    <p class="modal-ayuda"><b>En la web</b> decide si los especiales de esa lista salen en ollasarequipa.com. Apágalo si quieres que la lista siga vigente para vender pero ya no se muestre en la web. La web se actualiza sola en un máximo de dos horas.</p>
     <div id="mlCuerpo"></div>
     <div class="modal-pie">
       <button class="btn-guardar" id="mlGuardar">Guardar</button>
@@ -2126,7 +2130,8 @@ async function abrirListas(){
     const cuenta = {};
     ps.forEach(p=>{ cuenta[p.lista_id] = (cuenta[p.lista_id]||0)+1; });
     LISTAS_P = ls;
-    const hoy = new Date().toISOString().slice(0,10);
+    /* La fecha de Lima (UTC−5 todo el año), la misma con la que la base decide qué está vigente */
+    const hoy = new Date(Date.now() - 5*3600000).toISOString().slice(0,10);
     $('#mlCuerpo').innerHTML = ls.map((l,i)=>{
       const vence = l.vigente_hasta;
       let pill = '<span class="estado-pill ep-ok">visible para los asesores</span>';
@@ -2136,14 +2141,22 @@ async function abrirListas(){
         const dias = Math.round((Date.parse(vence+'T00:00:00Z') - Date.parse(hoy+'T00:00:00Z'))/86400000);
         pill = '<span class="estado-pill ep-ok">vigente · '+(dias===0?'cierra hoy':'quedan '+dias+' días')+'</span>';
       }
+      /* «En la web»: solo las listas de especiales. La Lista General, la Tienda en Línea y los Repuestos
+         salen siempre en la web (sin ellas se queda sin catálogo), así que no llevan interruptor. */
+      const conWeb = ('web' in l) && !['general','tienda-online','repuestos'].includes(l.id);
+      const vigente = l.activa && !(vence && vence < hoy) && !(l.vigente_desde && l.vigente_desde > hoy);
+      if(conWeb && vigente) pill += l.web === false
+        ? '<span class="estado-pill ep-pausa">no sale en la web</span>'
+        : '<span class="estado-pill ep-ok">sale en la web</span>';
       return '<div class="lista-fila"><div class="lista-cab"><b>'+escapa(l.nombre)+'</b>'+
         '<span class="cant">'+(cuenta[l.id]||0)+' productos</span>'+pill+'</div>'+
         '<div class="lista-campos">'+
         '<div><label>Vigente desde</label><input type="date" data-i="'+i+'" data-f="desde" value="'+(l.vigente_desde||'')+'"></div>'+
         '<div><label>Vigente hasta <span style="font-weight:400">(vacío = sin cierre)</span></label>'+
         '<input type="date" data-i="'+i+'" data-f="hasta" value="'+(vence||'')+'"></div>'+
-        '<label class="sw"><input type="checkbox" data-i="'+i+'" data-f="activa"'+(l.activa?' checked':'')+'> Activa</label>'+
-        '</div></div>';
+        '<div class="sws"><label class="sw"><input type="checkbox" data-i="'+i+'" data-f="activa"'+(l.activa?' checked':'')+'> Activa</label>'+
+        (conWeb ? '<label class="sw"><input type="checkbox" data-i="'+i+'" data-f="web"'+(l.web===false?'':' checked')+'> En la web</label>' : '')+
+        '</div></div></div>';
     }).join('');
   }catch(e){
     $('#mlCuerpo').innerHTML = '<div style="padding:20px;color:var(--rojo)">No se pudo cargar: '+escapa(String(e.message||e).slice(0,140))+'</div>';
@@ -2230,12 +2243,16 @@ $('#mlGuardar').addEventListener('click', async ()=>{
     const d = document.querySelector('[data-i="'+i+'"][data-f="desde"]').value || null;
     const h = document.querySelector('[data-i="'+i+'"][data-f="hasta"]').value || null;
     const a = document.querySelector('[data-i="'+i+'"][data-f="activa"]').checked;
-    return {id:l.id, vigente_desde:d, vigente_hasta:h, activa:a};
+    const c = {id:l.id, vigente_desde:d, vigente_hasta:h, activa:a};
+    const w = document.querySelector('[data-i="'+i+'"][data-f="web"]');   /* solo lo llevan las listas de especiales */
+    if(w) c.web = w.checked;
+    return c;
   });
   try{
     for(const c of cambios){
-      await sbPatch('listas_precios','id=eq.'+encodeURIComponent(c.id),
-        {vigente_desde:c.vigente_desde, vigente_hasta:c.vigente_hasta, activa:c.activa});
+      const cuerpo = {vigente_desde:c.vigente_desde, vigente_hasta:c.vigente_hasta, activa:c.activa};
+      if('web' in c) cuerpo.web = c.web;
+      await sbPatch('listas_precios','id=eq.'+encodeURIComponent(c.id), cuerpo);
     }
     $('#mlOk').classList.add('on');
     setTimeout(()=>$('#mlOk').classList.remove('on'), 1800);

@@ -7,6 +7,9 @@ Reemplaza al formulario de papel y al grupo de WhatsApp.
 - `public/index.html` — el formulario, estilo chat, una pregunta a la vez
 - `public/admin.html` — el panel por período: estados, datos crediticios,
   contrato y ficha en PDF, asesores, analistas, listas de precios
+  (vigencia de cada lista y, en las de especiales, «En la web»: si sus
+  especiales salen o no en ollasarequipa.com; columna `listas_precios.web`,
+  `sql/20261113_lista_en_la_web.sql`)
 - `public/_headers`, `public/_redirects`, `public/404.html` — configuración
 - `wrangler.toml` — dice que el sitio son los archivos de `public/`
 
