@@ -1047,37 +1047,26 @@ function datosContrato(r){
 
   const fuentes = d.fuentes || [];
   const delTit = fuentes.filter(f=>f.titular==='Titular');
-  const con = d.conyuge;
-  /* Titular sin ingresos propios (ama de casa, por ejemplo) y el ingreso es del
-     cónyuge: los datos laborales van solo en la sección del cónyuge. Antes, sin
-     fuente del titular, se copiaba la del cónyuge también en la del titular, con
-     el sueldo de 5,000 por defecto (Nelson, 23/11/2026). En la del titular va
-     solo su ocupación, si se anotó en detalle.ocupacion_titular. */
-  const soloConyuge = !delTit.length && !!(con && con.nombre)
-                      && fuentes.some(f=>f.titular==='Cónyuge');
-  if(soloConyuge){
-    pon('conf_empresa', String(d.ocupacion_titular||'').trim());
-  } else {
-    const base = delTit.length ? delTit : fuentes;
-    if(base.length){
-      const [e,ru,di,ca,ti] = _laboral(base[0], d, r);
-      pon('conf_empresa',e); pon('conf_empresa_ruc',ru);
-      pon('conf_direccion_trab',di); pon('conf_cargo',ca); pon('conf_tiempo_empleo',ti);
-    }
-    /* El sueldo de la primera fuente es el dato real; la columna del registro
-       es el respaldo para los registros antiguos. */
-    pon('conf_sueldo', _sol((base[0]||{}).sueldo || r.sueldoTitular));
-    casillas.push('completo_si');
-    const otras = base.slice(1);
-    if(otras.length){
-      pon('conf_fuente_otros',
-        otras.map(f=>((f.dedicacion||f.fuente||'')).trim()).filter(Boolean).join(' · '));
-      /* Otros ingresos: la suma de las demás fuentes. Antes quedaba vacío. */
-      const suma = otras.reduce((a,f)=>a + (parseFloat(f.sueldo)||0), 0);
-      if(suma > 0) pon('conf_otros_ingresos', _sol(suma));
-    }
+  const base = delTit.length ? delTit : fuentes;
+  if(base.length){
+    const [e,ru,di,ca,ti] = _laboral(base[0], d, r);
+    pon('conf_empresa',e); pon('conf_empresa_ruc',ru);
+    pon('conf_direccion_trab',di); pon('conf_cargo',ca); pon('conf_tiempo_empleo',ti);
+  }
+  /* El sueldo de la primera fuente es el dato real; la columna del registro
+     es el respaldo para los registros antiguos. */
+  pon('conf_sueldo', _sol((base[0]||{}).sueldo || r.sueldoTitular));
+  casillas.push('completo_si');
+  const otras = base.slice(1);
+  if(otras.length){
+    pon('conf_fuente_otros',
+      otras.map(f=>((f.dedicacion||f.fuente||'')).trim()).filter(Boolean).join(' · '));
+    /* Otros ingresos: la suma de las demás fuentes. Antes quedaba vacío. */
+    const suma = otras.reduce((a,f)=>a + (parseFloat(f.sueldo)||0), 0);
+    if(suma > 0) pon('conf_otros_ingresos', _sol(suma));
   }
 
+  const con = d.conyuge;
   if(con && con.nombre){
     casillas.push('civil_c');
     pon('conyuge_nombre',con.nombre); pon('conyuge_dni',con.dni); pon('conyuge_celular',con.celular);
