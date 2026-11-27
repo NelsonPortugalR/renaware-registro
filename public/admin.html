@@ -1556,7 +1556,9 @@ if(r.tipo !== 'afiliacion')
         campo('Dirección', x.direccion, 'id="rf-dir-'+i+'"')+
         '</div></div>';
     }
-    hr += '<div class="ayuda">La primera referencia es la que sale como familiar en el contrato.</div></div>';
+    hr += '<div class="ayuda">El formulario ya no pregunta el parentesco. Por su posición, '+
+          'la <b>Referencia 1</b> va a la casilla «Familiar» del contrato y del portal, y la '+
+          '<b>Referencia 2</b> a «Referencia personal».</div></div>';
     h += hr;
   }
 
@@ -2583,8 +2585,8 @@ function construyeCanonicoRw(r){
   const familiar  = refs[0] || null;
   const personal  = refs[1] || null;
   if(r.tipo==='credito'){
-    if(!familiar || !familiar.nombre || !familiar.celular) marca('SIN_FAMILIAR','bloqueo','PE Portal exige un familiar con teléfono.');
-    if(!personal || !personal.nombre || !personal.celular) marca('SIN_REFERENCIA','bloqueo','PE Portal exige una referencia personal con teléfono.');
+    if(!familiar || !familiar.nombre || !familiar.celular) marca('SIN_FAMILIAR','bloqueo','Falta la Referencia 1 con teléfono: va en la casilla «Familiar» del portal, que es obligatoria.');
+    if(!personal || !personal.nombre || !personal.celular) marca('SIN_REFERENCIA','bloqueo','Falta la Referencia 2 con teléfono: va en «Referencia personal» del portal, que es obligatoria.');
   }
 
   /* --- asesor --- */

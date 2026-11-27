@@ -2887,7 +2887,7 @@ function flujoConyuge(){
             valida(v){
               const r3 = validaNombre3(v);
               if(!r3.ok) return r3;
-              if(chocaConReferencia(r3.v)) return {ok:false, msg:'Esa persona ya está registrada como <b>referencia personal</b> 🙏 El cónyuge no puede ser referencia: ingresa el nombre correcto o corrige las referencias.'};
+              if(chocaConReferencia(r3.v)) return {ok:false, msg:'Esa persona ya está registrada como <b>referencia</b> 🙏 El cónyuge no puede ser referencia: ingresa el nombre correcto o corrige las referencias.'};
               return r3;
             },
             guarda(v){ c.nombre=v; }};
@@ -2919,20 +2919,22 @@ function flujoReferencias(reiniciar){
   pideReferencia(datos.referencias.length+1);
 }
 function pideReferencia(n, saltaConocidas){
+  /* El formulario ya no pregunta el parentesco: son «Referencia 1» y
+     «Referencia 2» y punto (Nelson, 27/11/2026). El rol se sigue guardando
+     porque es POSICIONAL —la primera va a la casilla «Familiar» del contrato
+     y del portal, la segunda a «Referencia personal»—, no porque se haya
+     preguntado nada. */
   const r = {nombre:'', celular:'', direccion:'', rol: n===1 ? 'familiar' : 'referencia'};
-  const esFam = (n===1);
+  const rolBuscado = r.rol;
 
-  /* Si el cliente ya dio referencias en compras anteriores, se ofrecen las que
-     encajan en este turno (familiar o personal) en vez de volver a escribirlas.
+  /* Si el cliente ya dio referencias en compras anteriores se ofrecen aquí,
+     sin filtrar por rol: cualquiera sirve para cualquiera de los dos huecos.
      Se excluyen las ya usadas en esta venta. */
   if(!saltaConocidas){
-    const rolBuscado = esFam ? 'familiar' : 'referencia';
     const usadas = (datos.referencias||[]).map(x=>normTxt(x.nombre));
     const cand = opcionesDe('referencias').filter(it=>{
       if(!it.nombre || !it.celular) return false;
-      if(usadas.includes(normTxt(it.nombre))) return false;
-      /* Las de rol desconocido sirven para cualquiera de los dos huecos */
-      return !it.rol || it.rol === rolBuscado;
+      return !usadas.includes(normTxt(it.nombre));
     });
     if(cand.length){
       const ops = cand.slice(0,5).map((it,i)=>({
@@ -2948,14 +2950,15 @@ function pideReferencia(n, saltaConocidas){
       }));
       ops.push({t:'✍️ Otra persona', clase:'secund',
                 fn:()=>{ burbujaUser('✍️ Otra persona'); dockLimpiar(); pideReferencia(n, true); }});
-      burbujaBot((esFam?'<b>Familiar</b> de contacto 👨‍👩‍👧':'<b>Referencia personal</b> 👥')+
-        ' ¿Usamos a alguien que ya dio antes?').then(()=>dockChips(ops, true));
+      burbujaBot('<b>Referencia '+n+'</b> 👥 ¿Usamos a alguien que ya dio antes?')
+        .then(()=>dockChips(ops, true));
       return;
     }
   }
-  const enc = esFam
-    ? '<b>Familiar</b> de contacto 👨‍👩‍👧 Escribe su <b>nombre y los dos apellidos</b>.<span class="peque">Rena Ware pide un familiar del cliente: padre, madre, hijo, hermano o similar. No puede ser el cónyuge ni el propio cliente.</span>'
-    : '<b>Referencia personal</b> 👥 Escribe su <b>nombre y los dos apellidos</b>.<span class="peque">No puede ser el cónyuge, el asesor, el cliente ni un familiar directo (padres, hijos, hermanos).</span>';
+  const enc = '<b>Referencia '+n+'</b> 👥 Escribe su <b>nombre y los dos apellidos</b>.'+
+    '<span class="peque">Alguien que conozca al cliente y pueda confirmar sus datos. '+
+    (n===1 ? 'No puede ser el cónyuge ni el propio cliente.'
+           : 'Distinta de la primera, y tampoco el cónyuge, el asesor ni el cliente.')+'</span>';
   burbujaBot(enc).then(()=>{
     dockTexto({tipo:'texto',inputmode:'text',placeholder:'Nombre y dos apellidos',
       omitirTxt:'⏭️ Las completo después',
@@ -2971,7 +2974,7 @@ function pideReferencia(n, saltaConocidas){
         const asesor = datos.ventaTipo==='Autocompra' ? datos.ventaComprador : datos.ventaVendedor;
         if(asesor && normTxt(r3.v)===normTxt(asesor)) return {ok:false, msg:'La referencia <b>no puede ser el asesor que hace la venta</b> 🙏 Ingresa a otra persona.'};
         if(datos.ventaComprador && normTxt(r3.v)===normTxt(datos.ventaComprador)) return {ok:false, msg:'La referencia <b>no puede ser el mismo cliente</b> 🙏 Ingresa a otra persona.'};
-        if(datos.referencias.some(x=>x.nombre && normTxt(x.nombre)===normTxt(r3.v))) return {ok:false, msg:'Esa persona <b>ya está registrada</b> 🙏 El familiar y la referencia personal deben ser personas distintas.'};
+        if(datos.referencias.some(x=>x.nombre && normTxt(x.nombre)===normTxt(r3.v))) return {ok:false, msg:'Esa persona <b>ya está registrada</b> 🙏 Las dos referencias deben ser personas distintas.'};
         return r3;
       },
       guarda(v){ r.nombre=v; }}, ()=>{
