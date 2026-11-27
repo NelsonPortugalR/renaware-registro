@@ -1940,6 +1940,8 @@ function guardarDetalle(){
         ? 'Pasar esta venta a CONTADO.\n\n' +
           '· Cuotas, cuota mensual, intereses y cargos quedan en 0\n' +
           '· La evaluación de créditos deja de aplicar\n' +
+          '· Referencias personales e información laboral dejan de salir en el ' +
+          'contrato y en los pasos del portal (quedan guardadas por si vuelve a crédito)\n' +
           '· El contrato marcará CONTADO y el saldo irá como pago contra entrega' +
           (saldo > 0.009 ? ' (S/ '+saldo.toFixed(2)+')' : ' (ya está cancelado)') +
           '\n\n¿Continuar?'
@@ -2687,10 +2689,14 @@ function construyeCanonicoRw(r){
           : 'Dirección distinta al domicilio: se escribe a mano, sin usar Replica.'
       };
     })(),
-    contactos: {
+    /* Familiar y referencia son del crédito: al contado el portal no muestra
+       esa sección —la modalidad define qué secciones aparecen— y el contrato
+       tampoco los imprime. Los datos siguen guardados en el registro por si
+       el pedido vuelve a crédito; lo que no sale son los pasos del portal. */
+    contactos: r.tipo==='credito' ? {
       familiar:   familiar ? {nombre:familiar.nombre||'', telefono:familiar.celular||'', direccion:familiar.direccion||''} : null,
       referencia: personal ? {nombre:personal.nombre||'', telefono:personal.celular||'', direccion:personal.direccion||''} : null
-    },
+    } : {familiar:null, referencia:null},
     items: items,
     credito: r.tipo==='credito' ? {
       inicial: r.inicial!=null ? Number(r.inicial) : null,
@@ -3699,14 +3705,47 @@ async function restauraVersion(){
    los ítems con la misma regla que el formulario: en autocompra manda el
    precio de asesor; en venta a terceros, el de cliente.
    ================================================================== */
-let CATALOGO = null, ITEMS_ED = [], ITEMS_reg = null;
+let CATALOGO = null, LISTAS_INFO = null, ITEMS_ED = [], ITEMS_reg = null;
 
 async function cargaCatalogo(){
   if(CATALOGO) return CATALOGO;
   try{
     CATALOGO = await sbGet('productos?select=codigo,nombre,lista_id,precio,precio_asesor,regalo&activo=eq.true&order=lista_id,codigo&limit=3000');
   }catch(e){ CATALOGO = []; }
+  /* Las listas se cargan junto al catálogo para poder decir de qué lista es
+     cada resultado y si esa lista ya venció: el buscador mostraba el slug
+     («general», «compartir») y nada sobre la vigencia. */
+  try{
+    const ls = await sbGet('listas_precios?select=id,nombre,orden,activa,vigente_desde,vigente_hasta');
+    const hoy = new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+    LISTAS_INFO = {};
+    ls.forEach(l=>{
+      LISTAS_INFO[l.id] = {
+        nombre:  l.nombre || l.id,
+        orden:   Number(l.orden || 99),
+        vencida: !l.activa || !!(l.vigente_hasta && l.vigente_hasta < hoy),
+        hasta:   l.vigente_hasta || null
+      };
+    });
+  }catch(e){ LISTAS_INFO = {}; }
   return CATALOGO;
+}
+
+function infoLista(id){ return (LISTAS_INFO||{})[id] || {}; }
+function nombreLista(id){ return infoLista(id).nombre || id || '?'; }
+
+/* Orden en que se ofrecen los resultados. La Lista General va primero porque
+   son los productos individuales a precio regular: antes quedaban sepultados
+   —el buscador cortaba en 8 y ordenaba por lista_id, así que «compartir» se
+   comía la lista entera y el producto suelto no aparecía nunca—. Detrás van
+   las promociones vigentes, y al final las listas vencidas, marcadas. */
+function pesoLista(id){
+  const L = infoLista(id);
+  if(L.vencida)             return 900 + (L.orden || 99);
+  if(id === 'general')      return 10;
+  if(id === 'repuestos')    return 80;
+  if(id === 'tienda-online') return 90;
+  return 20 + (L.orden || 99);
 }
 
 function esAutocompraReg(r){
@@ -3756,23 +3795,42 @@ function pintaItems(r){
 function buscaEnCatalogo(q){
   const t = rwNorm(q).split(/\s+/).filter(Boolean);
   if(!t.length) return [];
+  const exacto = rwNorm(q);
   return (CATALOGO||[]).filter(p=>{
-    const heno = rwNorm(p.codigo+' '+p.nombre+' '+p.lista_id);
+    /* el nombre de la lista también entra en la búsqueda: escribir «general»
+       trae los productos individuales a precio regular */
+    const heno = rwNorm(p.codigo+' '+p.nombre+' '+p.lista_id+' '+nombreLista(p.lista_id));
     return t.every(w=>heno.includes(w));
-  }).slice(0,8);
+  }).sort((a,b)=>
+    ((rwNorm(b.codigo)===exacto) - (rwNorm(a.codigo)===exacto))   // el código exacto manda
+    || (pesoLista(a.lista_id) - pesoLista(b.lista_id))
+    || String(a.nombre||'').localeCompare(String(b.nombre||''),'es')
+  ).slice(0,30);
 }
 
 function pintaResultados(r, q){
   const caja = $('#itResultados'); if(!caja) return;
   const res = buscaEnCatalogo(q);
   if(!res.length){ caja.innerHTML = q.trim() ? '<div class="ayuda">Sin coincidencias.</div>' : ''; return; }
-  caja.innerHTML = res.map(p=>
-    '<div class="ayuda it-add" data-cod="'+escapa(p.codigo)+'" data-lista="'+escapa(p.lista_id)+'"'+
-    ' style="cursor:pointer;padding:6px;border-bottom:1px solid var(--borde,#333)">'+
-      '<b class="mono">'+escapa(p.codigo)+'</b> · '+escapa(String(p.nombre).slice(0,70))+
-      '<br><span class="peque">'+escapa(p.lista_id)+' · cliente '+soles(p.precio)+
-      ' · asesor '+soles(p.precio_asesor)+'</span>'+
-    '</div>').join('');
+  let h = '', lista = null;
+  res.forEach(p=>{
+    if(p.lista_id !== lista){
+      lista = p.lista_id;
+      const L = infoLista(lista);
+      h += '<div class="ayuda" style="margin-top:8px;font-weight:600">'+
+             escapa(nombreLista(lista))+
+             (L.vencida ? '<span style="color:var(--acento,#c98a2e);font-weight:400"> · lista vencida'+
+                          (L.hasta ? ' el '+escapa(L.hasta) : '')+'</span>' : '')+
+           '</div>';
+    }
+    h += '<div class="ayuda it-add" data-cod="'+escapa(p.codigo)+'" data-lista="'+escapa(p.lista_id)+'"'+
+      ' style="cursor:pointer;padding:6px;border-bottom:1px solid var(--borde,#333)">'+
+        '<b class="mono">'+escapa(p.codigo)+'</b> · '+escapa(String(p.nombre).slice(0,70))+
+        '<br><span class="peque">cliente '+soles(p.precio)+
+        ' · asesor '+soles(p.precio_asesor)+'</span>'+
+      '</div>';
+  });
+  caja.innerHTML = h;
 }
 
 
